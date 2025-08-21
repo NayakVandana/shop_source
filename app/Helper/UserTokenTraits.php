@@ -1,0 +1,63 @@
+<?php
+
+namespace App\Helper;
+
+use App\Models\UserToken;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Crypt;
+
+trait UserTokenTraits
+{
+    function createWebToken()
+    {
+        $app_token = hash('sha256', Str::random(60));
+
+        $token = UserToken::where('user_id', $this->id)->first();
+
+        if (!$token) {
+            $token = new UserToken();
+        }
+
+        $token->user_id = $this->id;
+        $token->web_access_token = $app_token;
+        $token->save();
+        return $app_token;
+    }
+
+    function createAppToken($device_token, $device_type)
+    {
+        $app_token = hash('sha256', Str::random(60));
+
+        $existDeviceToken = UserToken::where('device_token', $device_token)->first();
+
+        if ($existDeviceToken) {
+            $existDeviceToken->device_token = "";
+            $existDeviceToken->device_type = "";
+            $existDeviceToken->app_access_token = "";
+            $existDeviceToken->save();
+        }
+
+        $token = UserToken::where('user_id', $this->id)->first();
+
+        if (!$token) {
+            $token = new UserToken();
+        }
+
+        $token->user_id = $this->id;
+        $token->device_type = strtoupper($device_type);
+        $token->device_token = $device_token;
+        $token->app_access_token = $app_token;
+        $token->save();
+
+        return $app_token;
+    }
+
+    function createAdminToken()
+    {
+        $token_data = [
+            'user_id' => $this->id,
+            'timestamp' => now()->timestamp
+        ];
+        return Crypt::encryptString(json_encode($token_data));
+    }
+}
