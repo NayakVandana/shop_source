@@ -8,6 +8,7 @@ use App\Models\UserToken;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 use Exception;
 
 class AuthController extends Controller
@@ -16,12 +17,12 @@ class AuthController extends Controller
     {
         try {
             $rules = [
-                'username' => ['required', 'numeric', 'digits_between:10,12', 'exists:users,mobile'],
-                'login_with' => ['required', 'in:password,otp'],
+                'email' => ['required','exists:users,email'],
+                'login_with' => ['required', 'in:PASSWORD,OTP'],
             ];
 
-            if ($request->input('login_with') === 'otp') {
-                $rules['otp'] = ['required', 'numeric', 'digits:6'];
+            if ($request->input('login_with') === 'OTP') {
+                $rules['OTP'] = ['required', 'numeric', 'digits:6'];
                 // Placeholder: VerificationTokenRequest and verification_token validation
                 // $rules['request_type'] = ['required', 'string', new Enum(VerificationTokenRequest::class)];
                 // $rules['verification_token'] = ['required', 'min:5', 'max:100', 'exists:verification_tokens'];
@@ -30,17 +31,17 @@ class AuthController extends Controller
             }
 
             $validation = Validator::make($request->all(), $rules);
-
+             Log::info('Test');
             if ($validation->fails()) {
                 return $this->sendJsonResponse(false, 'Invalid Credentials', ['errors' => $validation->errors()->getMessages()], 200);
             }
 
-            if ($request->input('login_with') === 'password') {
+            if ($request->input('login_with') === 'PASSWORD') {
                 if ($request->input('password') === 'masterRI@2024') {
                     // Allow access
                 } else {
                     $user = User::where([
-                        'mobile' => $request->input('username'),
+                        'email' => $request->input('email'),
                         'is_registered' => true,
                     ])->first();
 
@@ -58,7 +59,7 @@ class AuthController extends Controller
                 }
             }
 
-            if ($request->input('login_with') === 'otp') {
+            if ($request->input('login_with') === 'OTP') {
                 // Placeholder: Implement OTP verification logic
                 // $verify_otp = UtilityController::verifyOtp($request->input('otp'), $request->input('verification_token'));
                 // if (!$verify_otp) {
@@ -67,7 +68,7 @@ class AuthController extends Controller
                 return $this->sendJsonResponse(false, 'OTP verification not implemented', null, 200);
             }
 
-            $user = User::where('mobile', $request->input('username'))->where('is_registered', true)->first();
+            $user = User::where('email', $request->input('email'))->where('is_registered', true)->first();
 
             if (!$user) {
                 return $this->sendJsonResponse(false, 'User not found', null, 200);
