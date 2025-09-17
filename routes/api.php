@@ -6,4 +6,4 @@ use App\Http\Controllers\admin\ProductController as AdminProductController;
 use App\Http\Controllers\user\ProductController as UserProductController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/products', [UserProductController::class, 'index']);
+Route::post('/products', [UserProductController::class, 'index']);

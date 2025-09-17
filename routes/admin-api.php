@@ -6,7 +6,7 @@ use App\Http\Controllers\admin\ProductController as AdminProductController;
 use App\Http\Controllers\user\ProductController as UserProductController;
 use Illuminate\Support\Facades\Route;
 
-Route::post('/login', [AdminAuthController::class, 'adminLogin']);
+Route::post('/admin-login', [AdminAuthController::class, 'adminLogin']);
 
 
 
