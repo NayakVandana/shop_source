@@ -147,4 +147,17 @@ class AuthController extends Controller
             return $this->sendError($e);
         }
     }
+    public function profile()
+    {
+        try {
+            $user = auth()->user(); // Already the logged-in user
+
+            // Optionally, load relationships
+            // $user->load('posts', 'roles');
+
+            return $this->sendJsonResponse(true, 'Profile', $user);
+        } catch (Exception $e) {
+            return $this->sendError($e);
+        }
+    }
 }

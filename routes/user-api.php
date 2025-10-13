@@ -10,7 +10,12 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 
 Route::middleware(['user.verify'])->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout']);
+
+    Route::controller(AuthController::class)->group(function () {
+        Route::post('logout', 'logout');
+        Route::post('profile', 'profile');
+    });
+
     Route::get('/products', [UserProductController::class, 'index']);
 });
 
