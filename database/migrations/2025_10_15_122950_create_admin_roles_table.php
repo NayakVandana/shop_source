@@ -8,23 +8,22 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('users', function (Blueprint $table) {
+        Schema::create('admin_roles', function (Blueprint $table) {
             $table->id();
             $table->uuid('uuid')->unique();
             $table->string('name');
-            $table->string('email')->unique();
-            $table->string('mobile')->unique()->nullable();
-            $table->string('password')->nullable();
-            $table->string('role')->default('user');
-            $table->boolean('is_registered')->default(true);
+            $table->string('slug')->unique();
+            $table->text('description')->nullable();
             $table->boolean('is_active')->default(true);
-            $table->boolean('is_admin')->default(false);
+            $table->boolean('is_system')->default(false);
+            $table->json('permissions')->nullable(); // JSON array of permissions
+            $table->integer('sort_order')->default(0);
             $table->timestamps();
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('users');
+        Schema::dropIfExists('admin_roles');
     }
 };

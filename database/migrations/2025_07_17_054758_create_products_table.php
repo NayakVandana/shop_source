@@ -10,9 +10,23 @@ return new class extends Migration
     {
         Schema::create('products', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
             $table->string('name');
+            $table->string('slug')->unique();
             $table->text('description');
-            $table->decimal('price', 8, 2);
+            $table->text('short_description')->nullable();
+            $table->decimal('price', 10, 2);
+            $table->decimal('sale_price', 10, 2)->nullable();
+            $table->string('sku')->unique();
+            $table->integer('stock_quantity')->default(0);
+            $table->boolean('manage_stock')->default(true);
+            $table->boolean('in_stock')->default(true);
+            $table->decimal('weight', 8, 2)->nullable();
+            $table->string('dimensions')->nullable();
+            $table->json('images')->nullable();
+            $table->boolean('is_featured')->default(false);
+            $table->boolean('is_active')->default(true);
+            $table->foreignId('category_id')->nullable()->constrained()->onDelete('set null');
             $table->timestamps();
         });
     }

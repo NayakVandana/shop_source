@@ -8,23 +8,22 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('users', function (Blueprint $table) {
+        Schema::create('order_statuses', function (Blueprint $table) {
             $table->id();
             $table->uuid('uuid')->unique();
             $table->string('name');
-            $table->string('email')->unique();
-            $table->string('mobile')->unique()->nullable();
-            $table->string('password')->nullable();
-            $table->string('role')->default('user');
-            $table->boolean('is_registered')->default(true);
+            $table->string('slug')->unique();
+            $table->string('description')->nullable();
+            $table->string('color')->default('#6B7280');
             $table->boolean('is_active')->default(true);
-            $table->boolean('is_admin')->default(false);
+            $table->integer('sort_order')->default(0);
+            $table->boolean('is_system')->default(false);
             $table->timestamps();
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('users');
+        Schema::dropIfExists('order_statuses');
     }
 };

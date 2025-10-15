@@ -2,6 +2,8 @@
 
 use App\Http\Middleware\AdminVerifyToken;
 use App\Http\Middleware\UserVerifyToken;
+use App\Http\Middleware\ValidateUuid;
+use App\Http\Middleware\AdminPermissionMiddleware;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -32,7 +34,8 @@ return Application::configure(basePath: dirname(__DIR__))
        $middleware->alias([
             'user.verify' => UserVerifyToken::class,
             'admin.verify' => AdminVerifyToken::class,
-            
+            'uuid.validate' => ValidateUuid::class,
+            'admin.permission' => AdminPermissionMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
