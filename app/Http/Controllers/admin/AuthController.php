@@ -4,8 +4,11 @@ namespace App\Http\Controllers\admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\UserToken;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 use Exception;
 
 class AuthController extends Controller
@@ -36,6 +39,30 @@ class AuthController extends Controller
             // AdminLogin::dispatch($admin);
 
             return $this->sendJsonResponse(true, 'Admin successfully logged in', $admin, 201);
+        } catch (Exception $e) {
+            return $this->sendError($e);
+        }
+    }
+
+    public function adminLogout(Request $request)
+    {
+        try {
+            $user = $request->user();
+            $userToken = UserToken::where('user_id', $user->id)->first();
+            if ($userToken) {
+                $userToken->delete();
+            }
+            return $this->sendJsonResponse(true, 'Admin logged out successfully');
+        } catch (Exception $e) {
+            return $this->sendError($e);
+        }
+    }
+
+    public function adminProfile()
+    {
+        try {
+            $user = auth()->user();
+            return $this->sendJsonResponse(true, 'Admin profile', $user);
         } catch (Exception $e) {
             return $this->sendError($e);
         }

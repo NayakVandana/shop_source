@@ -14,7 +14,7 @@ class User extends Authenticatable
 
     protected $fillable = [
         'name', 'email', 'mobile', 'password', 'role', 'is_registered', 'is_active', 'is_admin', 'uuid',
-        'admin_role_id', 'permissions', 'is_super_admin', 'last_login_at', 'last_login_ip'
+        'last_login_at', 'last_login_ip'
     ];
 
     protected $hidden = [
@@ -27,8 +27,6 @@ class User extends Authenticatable
         'is_registered' => 'boolean',
         'is_active' => 'boolean',
         'is_admin' => 'boolean',
-        'permissions' => 'array',
-        'is_super_admin' => 'boolean',
         'last_login_at' => 'datetime',
     ];
 
@@ -48,123 +46,13 @@ class User extends Authenticatable
         return $this->hasOne(UserToken::class);
     }
 
-    public function orders()
-    {
-        return $this->hasMany(Order::class);
-    }
 
-    public function cartItems()
-    {
-        return $this->hasMany(CartItem::class);
-    }
-
-    public function adminRole()
-    {
-        return $this->belongsTo(AdminRole::class);
-    }
 
     public function getRouteKeyName()
     {
         return 'uuid';
     }
 
-    /**
-     * Check if user is super admin
-     */
-    public function isSuperAdmin()
-    {
-        return $this->is_super_admin || $this->adminRole?->slug === 'super-admin';
-    }
-
-    /**
-     * Check if user has permission
-     */
-    public function hasPermission($permission)
-    {
-        // Super admin has all permissions
-        if ($this->isSuperAdmin()) {
-            return true;
-        }
-
-        // Check custom permissions
-        if ($this->permissions && in_array($permission, $this->permissions)) {
-            return true;
-        }
-
-        // Check role permissions
-        if ($this->adminRole) {
-            return $this->adminRole->hasPermission($permission);
-        }
-
-        return false;
-    }
-
-    /**
-     * Check if user has any of the given permissions
-     */
-    public function hasAnyPermission($permissions)
-    {
-        foreach ($permissions as $permission) {
-            if ($this->hasPermission($permission)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Check if user has all of the given permissions
-     */
-    public function hasAllPermissions($permissions)
-    {
-        foreach ($permissions as $permission) {
-            if (!$this->hasPermission($permission)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /**
-     * Check if user can access module
-     */
-    public function canAccessModule($module)
-    {
-        $permissions = [
-            'products' => ['products.list', 'products.view'],
-            'orders' => ['orders.list', 'orders.view'],
-            'users' => ['users.list', 'users.view'],
-            'categories' => ['categories.list', 'categories.view'],
-            'discounts' => ['discounts.list', 'discounts.view'],
-            'coupons' => ['coupons.list', 'coupons.view'],
-            'locations' => ['locations.list', 'locations.view'],
-            'delivery' => ['delivery.manage'],
-            'returns' => ['returns.list', 'returns.view'],
-            'reports' => ['reports.view'],
-            'admin' => ['admin.roles', 'admin.permissions'],
-        ];
-
-        if (!isset($permissions[$module])) {
-            return false;
-        }
-
-        return $this->hasAnyPermission($permissions[$module]);
-    }
-
-    /**
-     * Get user permissions
-     */
-    public function getPermissions()
-    {
-        $permissions = $this->permissions ?? [];
-
-        if ($this->adminRole) {
-            $rolePermissions = $this->adminRole->permissions_array;
-            $permissions = array_merge($permissions, $rolePermissions);
-        }
-
-        return array_unique($permissions);
-    }
 
     /**
      * Update last login
@@ -178,11 +66,35 @@ class User extends Authenticatable
     }
 
     /**
-     * Check if user can perform action on resource
+     * Check if user is admin
      */
-    public function canPerformAction($action, $resource = null)
+    public function isAdmin()
     {
-        $permission = $resource ? "{$resource}.{$action}" : $action;
-        return $this->hasPermission($permission);
+        return $this->is_admin || $this->role === 'admin';
     }
+
+    /**
+     * Check if user is super admin
+     */
+    public function isSuperAdmin()
+    {
+        return $this->is_admin && $this->role === 'super_admin';
+    }
+
+    /**
+     * Create admin token
+     */
+    public function createAdminToken()
+    {
+        $token = $this->createToken('admin-token', ['admin'])->plainTextToken;
+        
+        // Store token in user_tokens table
+        $this->userToken()->updateOrCreate(
+            ['user_id' => $this->id],
+            ['web_access_token' => $token]
+        );
+        
+        return $token;
+    }
+
 }

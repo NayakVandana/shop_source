@@ -1,61 +1,163 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Shop Source Backend - Simplified Version
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+This is the Laravel backend for the simplified shop application.
 
-## About Laravel
+## Features
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+### Authentication
+- User login with email/password
+- User registration
+- JWT token-based authentication
+- User logout and profile management
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### Product Management
+- Product listing with filtering and pagination
+- Single product details
+- Featured products
+- Related products
+- Product categories
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Database Schema
 
-## Learning Laravel
+### Users Table
+- `id` - Primary key
+- `uuid` - Unique identifier
+- `name` - User name
+- `email` - Email address (unique)
+- `mobile` - Mobile number (unique, nullable)
+- `password` - Hashed password (nullable)
+- `role` - User role (default: 'user')
+- `is_registered` - Registration status
+- `is_active` - Account status
+- `last_login_at` - Last login timestamp
+- `last_login_ip` - Last login IP
+- `created_at`, `updated_at` - Timestamps
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### Products Table
+- `id` - Primary key
+- `uuid` - Unique identifier
+- `name` - Product name
+- `slug` - URL slug (unique)
+- `description` - Product description
+- `short_description` - Short description (nullable)
+- `price` - Product price
+- `sale_price` - Sale price (nullable)
+- `sku` - Stock keeping unit (unique)
+- `stock_quantity` - Stock quantity
+- `manage_stock` - Stock management flag
+- `in_stock` - Stock availability
+- `weight` - Product weight (nullable)
+- `dimensions` - Product dimensions (nullable)
+- `images` - Product images (JSON)
+- `videos` - Product videos (JSON)
+- `is_featured` - Featured product flag
+- `is_active` - Product status
+- `category_id` - Foreign key to categories
+- `created_at`, `updated_at` - Timestamps
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+### Categories Table
+- `id` - Primary key
+- `uuid` - Unique identifier
+- `name` - Category name
+- `slug` - URL slug (unique)
+- `description` - Category description (nullable)
+- `image` - Category image (nullable)
+- `is_active` - Category status
+- `sort_order` - Display order
+- `created_at`, `updated_at` - Timestamps
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### User Tokens Table
+- `id` - Primary key
+- `user_id` - Foreign key to users
+- `device_type` - Device type (nullable)
+- `device_token` - Device token (nullable)
+- `web_access_token` - Web access token (nullable)
+- `app_access_token` - App access token (nullable)
+- `created_at`, `updated_at` - Timestamps
 
-## Laravel Sponsors
+## API Endpoints
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### Public Routes
+- `POST /api/login` - User login
+- `POST /api/register` - User registration
+- `POST /api/products/list` - Get products list
+- `POST /api/products/show` - Get single product
+- `POST /api/products/featured` - Get featured products
+- `POST /api/products/related` - Get related products
+- `POST /api/admin-login` - Admin login (requires user_id)
 
-### Premium Partners
+### Protected Routes (require authentication)
+- `POST /api/logout` - User logout
+- `POST /api/profile` - Get user profile
+- `POST /api/admin-logout` - Admin logout
+- `POST /api/admin-profile` - Admin profile
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+## Installation
 
-## Contributing
+1. Install dependencies:
+   ```bash
+   composer install
+   ```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+2. Set up environment:
+   ```bash
+   cp .env.example .env
+   php artisan key:generate
+   ```
 
-## Code of Conduct
+3. Configure database in `.env`:
+   ```env
+   DB_CONNECTION=sqlite
+   DB_DATABASE=database/database.sqlite
+   ```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+4. Run migrations:
+   ```bash
+   php artisan migrate
+   php artisan db:seed
+   ```
 
-## Security Vulnerabilities
+5. Start server:
+   ```bash
+   php artisan serve
+   ```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Test Users
 
-## License
+After running the seeders, you'll have these test users:
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+### Admin User
+- **User ID:** 1
+- **Email:** admin@example.com
+- **Password:** password123
+- **Role:** Admin
+
+### Regular User
+- **User ID:** 2
+- **Email:** user@example.com
+- **Password:** password123
+- **Role:** User
+
+### Admin Login
+To login as admin, use the admin login page with User ID: `1`
+
+## Authentication
+
+The API uses JWT tokens for authentication. After successful login, include the token in the Authorization header:
+
+```
+Authorization: Bearer {token}
+```
+
+## Product Filtering
+
+The products list endpoint supports various filters:
+- `search` - Search in name, description, SKU
+- `category_id` - Filter by category
+- `min_price` - Minimum price
+- `max_price` - Maximum price
+- `in_stock` - Stock availability
+- `featured` - Featured products only
+- `sort_by` - Sort field (created_at, price, name)
+- `sort_order` - Sort direction (asc, desc)
+- `per_page` - Items per page (default: 12)

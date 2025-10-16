@@ -19,11 +19,6 @@ return new class extends Migration
             $table->boolean('is_registered')->default(true);
             $table->boolean('is_active')->default(true);
             $table->boolean('is_admin')->default(false);
-            
-            // Admin permission fields
-            $table->foreignId('admin_role_id')->nullable()->constrained()->onDelete('set null');
-            $table->json('permissions')->nullable(); // Custom permissions for specific users
-            $table->boolean('is_super_admin')->default(false);
             $table->timestamp('last_login_at')->nullable();
             $table->string('last_login_ip')->nullable();
             

@@ -5,7 +5,6 @@ namespace App\Http\Controllers\user;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\Category;
-use App\Models\DeliveryLocation;
 use Illuminate\Http\Request;
 use Exception;
 
@@ -50,12 +49,6 @@ class ProductController extends Controller
                 $query->where('is_featured', true);
             }
 
-            // Filter by delivery location
-            if ($request->has('latitude') && $request->has('longitude')) {
-                $latitude = $request->get('latitude');
-                $longitude = $request->get('longitude');
-                $query->deliverableTo($latitude, $longitude);
-            }
 
             // Sort
             $sortBy = $request->get('sort_by', 'created_at');
@@ -71,25 +64,12 @@ class ProductController extends Controller
             $perPage = $request->get('per_page', 12);
             $products = $query->paginate($perPage);
 
-            // Add image URLs and delivery info to each product
-            $products->getCollection()->transform(function ($product) use ($request) {
+            // Add image URLs to each product
+            $products->getCollection()->transform(function ($product) {
                 $product->image_urls = $product->image_urls;
                 $product->primary_image_url = $product->primary_image_url;
                 $product->video_urls = $product->video_urls;
                 $product->primary_video_url = $product->primary_video_url;
-                
-                // Add delivery information if location provided
-                if ($request->has('latitude') && $request->has('longitude')) {
-                    $deliveryInfo = $product->getDeliveryInfo(
-                        $request->get('latitude'), 
-                        $request->get('longitude')
-                    );
-                    $product->delivery_info = $deliveryInfo;
-                    $product->is_deliverable = $deliveryInfo ? true : false;
-                } else {
-                    $product->delivery_info = null;
-                    $product->is_deliverable = null;
-                }
                 
                 return $product;
             });
@@ -112,24 +92,11 @@ class ProductController extends Controller
                 ->where('uuid', $data['id'])
                 ->firstOrFail();
             
-            // Add image URLs and delivery info to response
+            // Add image URLs to response
             $product->image_urls = $product->image_urls;
             $product->primary_image_url = $product->primary_image_url;
             $product->video_urls = $product->video_urls;
             $product->primary_video_url = $product->primary_video_url;
-            
-            // Add delivery information if location provided
-            if ($request->has('latitude') && $request->has('longitude')) {
-                $deliveryInfo = $product->getDeliveryInfo(
-                    $request->get('latitude'), 
-                    $request->get('longitude')
-                );
-                $product->delivery_info = $deliveryInfo;
-                $product->is_deliverable = $deliveryInfo ? true : false;
-            } else {
-                $product->delivery_info = null;
-                $product->is_deliverable = null;
-            }
             
             return $this->sendJsonResponse(true, 'Product retrieved successfully', $product);
         } catch (Exception $e) {
