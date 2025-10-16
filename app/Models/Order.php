@@ -129,7 +129,8 @@ class Order extends Model
     {
         return $this->is_cancellable && 
                in_array($this->status, ['pending', 'confirmed']) && 
-               !$this->cancelled_at;
+               !$this->cancelled_at &&
+               $this->created_at->diffInDays(now()) <= 7; // 7 days cancellation window
     }
 
     /**
@@ -138,9 +139,85 @@ class Order extends Model
     public function canBeReturned()
     {
         return $this->is_returnable && 
-               in_array($this->status, ['delivered']) && 
+               in_array($this->status, ['delivered', 'completed']) && 
                $this->delivered_at && 
                $this->delivered_at->diffInDays(now()) <= 30; // 30 days return window
+    }
+
+    /**
+     * Check if order can be partially returned
+     */
+    public function canBePartiallyReturned()
+    {
+        return $this->canBeReturned() && 
+               $this->returns()->where('status', '!=', 'rejected')->count() < $this->orderItems()->count();
+    }
+
+    /**
+     * Check if order item can be returned
+     */
+    public function canReturnItem($orderItemId)
+    {
+        $orderItem = $this->orderItems()->find($orderItemId);
+        if (!$orderItem) {
+            return false;
+        }
+
+        // Check if already returned
+        $existingReturn = $this->returns()
+            ->where('order_item_id', $orderItemId)
+            ->whereIn('status', ['pending', 'approved', 'processing', 'completed'])
+            ->first();
+
+        if ($existingReturn) {
+            return false;
+        }
+
+        return $this->canBeReturned();
+    }
+
+    /**
+     * Get returnable items
+     */
+    public function getReturnableItems()
+    {
+        $returnedItemIds = $this->returns()
+            ->whereIn('status', ['pending', 'approved', 'processing', 'completed'])
+            ->pluck('order_item_id')
+            ->toArray();
+
+        return $this->orderItems()
+            ->whereNotIn('id', $returnedItemIds)
+            ->get();
+    }
+
+    /**
+     * Calculate total refundable amount
+     */
+    public function getTotalRefundableAmount()
+    {
+        $totalRefunded = $this->returns()
+            ->where('status', 'completed')
+            ->sum('refund_amount');
+
+        return $this->total_amount - $totalRefunded;
+    }
+
+    /**
+     * Get cancellation reasons
+     */
+    public static function getCancellationReasons()
+    {
+        return [
+            'changed_mind' => 'Changed Mind',
+            'found_better_price' => 'Found Better Price',
+            'shipping_too_slow' => 'Shipping Too Slow',
+            'product_not_needed' => 'Product Not Needed',
+            'duplicate_order' => 'Duplicate Order',
+            'payment_issue' => 'Payment Issue',
+            'address_error' => 'Address Error',
+            'other' => 'Other',
+        ];
     }
 
     /**
@@ -158,6 +235,18 @@ class Order extends Model
             'cancellation_reason' => $reason,
         ]);
 
+        // Restore stock for all items
+        foreach ($this->orderItems as $item) {
+            if ($item->product->manage_stock) {
+                $item->product->increment('stock_quantity', $item->quantity);
+                
+                // Update in_stock status
+                if ($item->product->stock_quantity > 0) {
+                    $item->product->update(['in_stock' => true]);
+                }
+            }
+        }
+
         $this->updateStatus(
             'cancelled',
             'Order Cancelled',
@@ -165,6 +254,29 @@ class Order extends Model
             ['cancellation_reason' => $reason],
             $cancelledBy
         );
+
+        return $this;
+    }
+
+    /**
+     * Process refund for cancelled order
+     */
+    public function processCancellationRefund($refundMethod = 'original_payment', $refundReference = null)
+    {
+        if ($this->status !== 'cancelled') {
+            throw new \Exception('Order must be cancelled to process refund');
+        }
+
+        // This would integrate with payment gateway
+        // For now, just log the refund
+        \Log::info("Cancellation refund processed for order {$this->order_number}: {$this->total_amount} via {$refundMethod}");
+
+        $this->update([
+            'payment_status' => 'refunded',
+            'refund_method' => $refundMethod,
+            'refund_reference' => $refundReference,
+            'refunded_at' => now(),
+        ]);
 
         return $this;
     }

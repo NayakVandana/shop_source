@@ -28,6 +28,17 @@ return new class extends Migration
             $table->timestamp('completed_at')->nullable();
             $table->string('processed_by_type')->nullable(); // admin, system
             $table->unsignedBigInteger('processed_by_id')->nullable();
+            
+            // Replacement fields
+            $table->foreignId('replacement_product_id')->nullable()->constrained('products')->onDelete('set null');
+            $table->foreignId('replacement_order_id')->nullable()->constrained('orders')->onDelete('set null');
+            $table->decimal('return_shipping_cost', 8, 2)->nullable()->default(0);
+            $table->string('refund_method')->nullable();
+            $table->string('refund_reference')->nullable();
+            $table->integer('return_window_days')->default(30);
+            $table->boolean('is_defective')->default(false);
+            $table->text('condition_notes')->nullable();
+            
             $table->timestamps();
             
             $table->index(['order_id', 'status']);

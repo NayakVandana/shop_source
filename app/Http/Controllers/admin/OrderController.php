@@ -311,13 +311,20 @@ class OrderController extends Controller
                 'status' => 'required|string|in:approved,rejected,processing,completed',
                 'admin_notes' => 'nullable|string|max:1000',
                 'refund_amount' => 'nullable|numeric|min:0',
-                'return_tracking_number' => 'nullable|string'
+                'return_tracking_number' => 'nullable|string',
+                'refund_method' => 'nullable|string|in:original_payment,store_credit,bank_transfer,check,wallet',
+                'refund_reference' => 'nullable|string',
+                'return_shipping_cost' => 'nullable|numeric|min:0',
+                'is_defective' => 'boolean',
+                'condition_notes' => 'nullable|string|max:1000',
+                'replacement_product_id' => 'nullable|integer|exists:products,id'
             ]);
 
             $return = OrderReturn::where('uuid', $data['id'])->firstOrFail();
             $admin = auth()->user();
 
-            $return->update([
+            // Update return with new data
+            $updateData = [
                 'status' => $data['status'],
                 'admin_notes' => $data['admin_notes'],
                 'refund_amount' => $data['refund_amount'] ?? $return->refund_amount,
@@ -325,13 +332,36 @@ class OrderController extends Controller
                 'processed_at' => now(),
                 'processed_by_type' => get_class($admin),
                 'processed_by_id' => $admin->id,
-            ]);
+            ];
+
+            // Add optional fields if provided
+            if (isset($data['refund_method'])) {
+                $updateData['refund_method'] = $data['refund_method'];
+            }
+            if (isset($data['refund_reference'])) {
+                $updateData['refund_reference'] = $data['refund_reference'];
+            }
+            if (isset($data['return_shipping_cost'])) {
+                $updateData['return_shipping_cost'] = $data['return_shipping_cost'];
+            }
+            if (isset($data['is_defective'])) {
+                $updateData['is_defective'] = $data['is_defective'];
+            }
+            if (isset($data['condition_notes'])) {
+                $updateData['condition_notes'] = $data['condition_notes'];
+            }
+            if (isset($data['replacement_product_id'])) {
+                $updateData['replacement_product_id'] = $data['replacement_product_id'];
+            }
+
+            $return->update($updateData);
 
             if ($data['status'] === 'completed') {
                 $return->update(['completed_at' => now()]);
+                $return->handleReturnCompletion();
             }
 
-            $return->load(['order', 'orderItem.product']);
+            $return->load(['order', 'orderItem.product', 'replacementProduct', 'replacementOrder']);
 
             return $this->sendJsonResponse(true, 'Return processed successfully', $return);
         } catch (Exception $e) {
@@ -359,6 +389,109 @@ class OrderController extends Controller
             ];
 
             return $this->sendJsonResponse(true, 'Return statistics retrieved successfully', $stats);
+        } catch (Exception $e) {
+            return $this->sendError($e);
+        }
+    }
+
+    public function bulkProcessReturns(Request $request)
+    {
+        try {
+            $data = $request->validate([
+                'return_ids' => 'required|array',
+                'return_ids.*' => 'string|exists:order_returns,uuid',
+                'action' => 'required|string|in:approve,reject,process',
+                'admin_notes' => 'nullable|string|max:1000',
+                'refund_method' => 'nullable|string|in:original_payment,store_credit,bank_transfer,check,wallet'
+            ]);
+
+            $admin = auth()->user();
+            $updated = 0;
+
+            foreach ($data['return_ids'] as $returnId) {
+                $return = OrderReturn::where('uuid', $returnId)->first();
+                if ($return && $return->isProcessable()) {
+                    $return->process($data['action'], $data['admin_notes'] ?? null, $admin);
+                    $updated++;
+                }
+            }
+
+            return $this->sendJsonResponse(true, "{$updated} returns processed successfully");
+        } catch (Exception $e) {
+            return $this->sendError($e);
+        }
+    }
+
+    public function createReplacementOrder(Request $request)
+    {
+        try {
+            $data = $request->validate([
+                'return_id' => 'required|string|exists:order_returns,uuid',
+                'replacement_product_id' => 'required|integer|exists:products,id',
+                'quantity' => 'required|integer|min:1',
+                'notes' => 'nullable|string|max:1000'
+            ]);
+
+            $return = OrderReturn::where('uuid', $data['return_id'])->firstOrFail();
+            
+            if ($return->status !== 'approved') {
+                return $this->sendJsonResponse(false, 'Return must be approved to create replacement order', null, 400);
+            }
+
+            $replacementOrder = $return->createReplacementOrder();
+            $replacementOrder->load(['orderItems.product', 'user']);
+
+            return $this->sendJsonResponse(true, 'Replacement order created successfully', $replacementOrder, 201);
+        } catch (Exception $e) {
+            return $this->sendError($e);
+        }
+    }
+
+    public function getCancellationStats()
+    {
+        try {
+            $stats = [
+                'total_cancellations' => Order::where('status', 'cancelled')->count(),
+                'cancellation_reasons' => Order::selectRaw('cancellation_reason, count(*) as count')
+                    ->where('status', 'cancelled')
+                    ->whereNotNull('cancellation_reason')
+                    ->groupBy('cancellation_reason')
+                    ->get(),
+                'cancelled_orders_value' => Order::where('status', 'cancelled')->sum('total_amount'),
+                'refunded_cancellations' => Order::where('status', 'cancelled')
+                    ->where('payment_status', 'refunded')
+                    ->count(),
+                'pending_refunds' => Order::where('status', 'cancelled')
+                    ->where('payment_status', '!=', 'refunded')
+                    ->count(),
+            ];
+
+            return $this->sendJsonResponse(true, 'Cancellation statistics retrieved successfully', $stats);
+        } catch (Exception $e) {
+            return $this->sendError($e);
+        }
+    }
+
+    public function processCancellationRefund(Request $request)
+    {
+        try {
+            $data = $request->validate([
+                'order_id' => 'required|string|exists:orders,uuid',
+                'refund_method' => 'required|string|in:original_payment,store_credit,bank_transfer,check,wallet',
+                'refund_reference' => 'nullable|string',
+                'refund_amount' => 'nullable|numeric|min:0'
+            ]);
+
+            $order = Order::where('uuid', $data['order_id'])->firstOrFail();
+            
+            if ($order->status !== 'cancelled') {
+                return $this->sendJsonResponse(false, 'Order must be cancelled to process refund', null, 400);
+            }
+
+            $refundAmount = $data['refund_amount'] ?? $order->total_amount;
+            $order->processCancellationRefund($data['refund_method'], $data['refund_reference']);
+
+            return $this->sendJsonResponse(true, 'Cancellation refund processed successfully', $order);
         } catch (Exception $e) {
             return $this->sendError($e);
         }

@@ -229,12 +229,15 @@ class OrderController extends Controller
             $data = $request->validate([
                 'order_id' => 'required|string',
                 'order_item_id' => 'required|integer|exists:order_items,id',
-                'type' => 'required|string|in:return,exchange,refund',
+                'type' => 'required|string|in:return,exchange,refund,replacement,store_credit',
                 'reason' => 'required|string',
                 'description' => 'nullable|string|max:1000',
                 'quantity' => 'required|integer|min:1',
                 'images' => 'nullable|array|max:5',
-                'images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048'
+                'images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+                'replacement_product_id' => 'nullable|integer|exists:products,id',
+                'is_defective' => 'boolean',
+                'condition_notes' => 'nullable|string|max:1000'
             ]);
 
             $user = auth()->user();
@@ -247,10 +250,14 @@ class OrderController extends Controller
                 return $this->sendJsonResponse(false, 'This order cannot be returned', null, 400);
             }
 
-            // Check if order item belongs to this order
+            // Check if order item belongs to this order and can be returned
             $orderItem = OrderItem::where('id', $data['order_item_id'])
                 ->where('order_id', $order->id)
                 ->firstOrFail();
+
+            if (!$order->canReturnItem($orderItem->id)) {
+                return $this->sendJsonResponse(false, 'This item cannot be returned', null, 400);
+            }
 
             // Check quantity
             if ($data['quantity'] > $orderItem->quantity) {
@@ -267,9 +274,9 @@ class OrderController extends Controller
             }
 
             // Calculate refund amount
-            $refundAmount = ($orderItem->price * $data['quantity']) - ($orderItem->discount_amount ?? 0);
+            $refundAmount = $orderItem->unit_price * $data['quantity'];
 
-            $return = OrderReturn::create([
+            $returnData = [
                 'order_id' => $order->id,
                 'order_item_id' => $orderItem->id,
                 'type' => $data['type'],
@@ -279,9 +286,17 @@ class OrderController extends Controller
                 'refund_amount' => $refundAmount,
                 'images' => $imagePaths,
                 'customer_notes' => $data['description'],
-            ]);
+                'is_defective' => $data['is_defective'] ?? false,
+                'condition_notes' => $data['condition_notes'] ?? null,
+            ];
 
-            $return->load(['order', 'orderItem.product']);
+            // Add replacement product if specified
+            if (isset($data['replacement_product_id'])) {
+                $returnData['replacement_product_id'] = $data['replacement_product_id'];
+            }
+
+            $return = OrderReturn::create($returnData);
+            $return->load(['order', 'orderItem.product', 'replacementProduct']);
 
             return $this->sendJsonResponse(true, 'Return request submitted successfully', $return, 201);
         } catch (Exception $e) {
@@ -326,8 +341,68 @@ class OrderController extends Controller
     {
         try {
             $reasons = OrderReturn::getReturnReasons();
+            $types = OrderReturn::getReturnTypes();
+            $refundMethods = OrderReturn::getRefundMethods();
 
-            return $this->sendJsonResponse(true, 'Return reasons retrieved successfully', $reasons);
+            return $this->sendJsonResponse(true, 'Return data retrieved successfully', [
+                'reasons' => $reasons,
+                'types' => $types,
+                'refund_methods' => $refundMethods
+            ]);
+        } catch (Exception $e) {
+            return $this->sendError($e);
+        }
+    }
+
+    public function cancelReturn(Request $request)
+    {
+        try {
+            $data = $request->validate([
+                'return_id' => 'required|string|exists:order_returns,uuid'
+            ]);
+
+            $user = auth()->user();
+            $return = OrderReturn::where('uuid', $data['return_id'])
+                ->whereHas('order', function($q) use ($user) {
+                    $q->where('user_id', $user->id);
+                })
+                ->firstOrFail();
+
+            if (!$return->canBeCancelled()) {
+                return $this->sendJsonResponse(false, 'This return cannot be cancelled', null, 400);
+            }
+
+            $return->update(['status' => 'cancelled']);
+
+            return $this->sendJsonResponse(true, 'Return cancelled successfully', $return);
+        } catch (Exception $e) {
+            return $this->sendError($e);
+        }
+    }
+
+    public function getReturnableItems(Request $request)
+    {
+        try {
+            $data = $request->validate([
+                'order_id' => 'required|string|exists:orders,uuid'
+            ]);
+
+            $user = auth()->user();
+            $order = Order::where('uuid', $data['order_id'])
+                ->where('user_id', $user->id)
+                ->firstOrFail();
+
+            $returnableItems = $order->getReturnableItems();
+            $canReturn = $order->canBeReturned();
+            $canPartialReturn = $order->canBePartiallyReturned();
+
+            return $this->sendJsonResponse(true, 'Returnable items retrieved successfully', [
+                'items' => $returnableItems,
+                'can_return' => $canReturn,
+                'can_partial_return' => $canPartialReturn,
+                'return_window_days' => 30,
+                'days_since_delivery' => $order->delivered_at ? $order->delivered_at->diffInDays(now()) : null
+            ]);
         } catch (Exception $e) {
             return $this->sendError($e);
         }

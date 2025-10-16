@@ -11,6 +11,7 @@ use App\Http\Controllers\admin\LocationController as AdminLocationController;
 use App\Http\Controllers\admin\DeliveryScheduleController as AdminDeliveryScheduleController;
 use App\Http\Controllers\admin\AdminRoleController as AdminRoleController;
 use App\Http\Controllers\admin\UserController as AdminUserController;
+use App\Http\Controllers\admin\AdminReviewController;
 use Illuminate\Support\Facades\Route;
 
 // Admin Authentication
@@ -147,4 +148,30 @@ Route::middleware(['user.verify', 'admin.verify', 'uuid.validate'])->group(funct
     Route::post('/users/delete', [AdminUserController::class, 'destroy']);
     Route::post('/users/toggle-status', [AdminUserController::class, 'toggleStatus']);
     Route::post('/users/stats', [AdminUserController::class, 'getUserStats']);
+
+    // Review Management
+    Route::post('/reviews/list', [AdminReviewController::class, 'index']);
+    Route::post('/reviews/show', [AdminReviewController::class, 'show']);
+    Route::post('/reviews/update', [AdminReviewController::class, 'update']);
+    Route::post('/reviews/delete', [AdminReviewController::class, 'destroy']);
+    Route::post('/reviews/approve', [AdminReviewController::class, 'approve']);
+    Route::post('/reviews/reject', [AdminReviewController::class, 'reject']);
+    Route::post('/reviews/toggle-featured', [AdminReviewController::class, 'toggleFeatured']);
+    Route::post('/reviews/bulk-approve', [AdminReviewController::class, 'bulkApprove']);
+    Route::post('/reviews/bulk-reject', [AdminReviewController::class, 'bulkReject']);
+    Route::post('/reviews/bulk-delete', [AdminReviewController::class, 'bulkDelete']);
+    Route::post('/reviews/stats', [AdminReviewController::class, 'getStats']);
+    Route::post('/reviews/product-reviews', [AdminReviewController::class, 'getProductReviews']);
+
+    // Return & Replacement Management
+    Route::post('/returns/list', [AdminOrderController::class, 'getReturns']);
+    Route::post('/returns/show', [AdminOrderController::class, 'showReturn']);
+    Route::post('/returns/process', [AdminOrderController::class, 'processReturn']);
+    Route::post('/returns/bulk-process', [AdminOrderController::class, 'bulkProcessReturns']);
+    Route::post('/returns/stats', [AdminOrderController::class, 'getReturnStats']);
+    Route::post('/returns/create-replacement', [AdminOrderController::class, 'createReplacementOrder']);
+    
+    // Cancellation Management
+    Route::post('/cancellations/stats', [AdminOrderController::class, 'getCancellationStats']);
+    Route::post('/cancellations/process-refund', [AdminOrderController::class, 'processCancellationRefund']);
 });

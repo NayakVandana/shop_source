@@ -24,6 +24,7 @@ return new class extends Migration
             $table->decimal('weight', 8, 2)->nullable();
             $table->string('dimensions')->nullable();
             $table->json('images')->nullable();
+            $table->json('videos')->nullable()->after('images');
             $table->boolean('is_featured')->default(false);
             $table->boolean('is_active')->default(true);
             $table->foreignId('category_id')->nullable()->constrained()->onDelete('set null');

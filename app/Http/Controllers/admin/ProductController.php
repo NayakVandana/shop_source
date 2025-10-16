@@ -63,6 +63,8 @@ class ProductController extends Controller
             $products->getCollection()->transform(function ($product) {
                 $product->image_urls = $product->image_urls;
                 $product->primary_image_url = $product->primary_image_url;
+                $product->video_urls = $product->video_urls;
+                $product->primary_video_url = $product->primary_video_url;
                 return $product;
             });
 
@@ -93,6 +95,8 @@ class ProductController extends Controller
                 'dimensions' => 'nullable|string',
                 'images' => 'nullable|array|max:10',
                 'images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+                'videos' => 'nullable|array|max:5',
+                'videos.*' => 'file|mimes:mp4,avi,mov,wmv,flv,webm|max:10240',
                 'is_featured' => 'boolean',
                 'is_active' => 'boolean',
                 'category_id' => 'nullable|exists:categories,id'
@@ -109,12 +113,22 @@ class ProductController extends Controller
                 $data['images'] = [];
             }
 
+            // Handle video uploads
+            if ($request->hasFile('videos')) {
+                $videoPaths = Product::storeVideos($request->file('videos'), $data['slug']);
+                $data['videos'] = $videoPaths;
+            } else {
+                $data['videos'] = [];
+            }
+
             $product = Product::create($data);
             $product->load('category');
 
             // Add image URLs to response
             $product->image_urls = $product->image_urls;
             $product->primary_image_url = $product->primary_image_url;
+            $product->video_urls = $product->video_urls;
+            $product->primary_video_url = $product->primary_video_url;
 
             return $this->sendJsonResponse(true, 'Product created successfully', $product, 201);
         } catch (Exception $e) {
@@ -134,6 +148,8 @@ class ProductController extends Controller
             // Add image URLs to response
             $product->image_urls = $product->image_urls;
             $product->primary_image_url = $product->primary_image_url;
+            $product->video_urls = $product->video_urls;
+            $product->primary_video_url = $product->primary_video_url;
             
             return $this->sendJsonResponse(true, 'Product retrieved successfully', $product);
         } catch (Exception $e) {
@@ -163,6 +179,8 @@ class ProductController extends Controller
                 'dimensions' => 'nullable|string',
                 'images' => 'nullable|array|max:10',
                 'images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+                'videos' => 'nullable|array|max:5',
+                'videos.*' => 'file|mimes:mp4,avi,mov,wmv,flv,webm|max:10240',
                 'is_featured' => 'boolean',
                 'is_active' => 'boolean',
                 'category_id' => 'nullable|exists:categories,id'
@@ -186,12 +204,24 @@ class ProductController extends Controller
                 $data['images'] = $imagePaths;
             }
 
+            // Handle video uploads
+            if ($request->hasFile('videos')) {
+                // Delete old videos
+                $product->deleteVideos();
+                
+                // Store new videos
+                $videoPaths = Product::storeVideos($request->file('videos'), $data['slug'] ?? $product->slug);
+                $data['videos'] = $videoPaths;
+            }
+
             $product->update($data);
             $product->load('category');
 
             // Add image URLs to response
             $product->image_urls = $product->image_urls;
             $product->primary_image_url = $product->primary_image_url;
+            $product->video_urls = $product->video_urls;
+            $product->primary_video_url = $product->primary_video_url;
 
             return $this->sendJsonResponse(true, 'Product updated successfully', $product);
         } catch (Exception $e) {
@@ -212,8 +242,9 @@ class ProductController extends Controller
 
             $product = Product::where('uuid', $data['id'])->firstOrFail();
             
-            // Delete associated images
+            // Delete associated images and videos
             $product->deleteImages();
+            $product->deleteVideos();
             
             $product->delete();
 

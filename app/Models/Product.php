@@ -15,7 +15,7 @@ class Product extends Model
     protected $fillable = [
         'name', 'slug', 'description', 'short_description', 'price', 'sale_price',
         'sku', 'stock_quantity', 'manage_stock', 'in_stock', 'weight', 'dimensions',
-        'images', 'is_featured', 'is_active', 'category_id', 'uuid'
+        'images', 'videos', 'is_featured', 'is_active', 'category_id', 'uuid'
     ];
 
     protected $casts = [
@@ -23,6 +23,7 @@ class Product extends Model
         'sale_price' => 'decimal:2',
         'weight' => 'decimal:2',
         'images' => 'array',
+        'videos' => 'array',
         'manage_stock' => 'boolean',
         'in_stock' => 'boolean',
         'is_featured' => 'boolean',
@@ -69,6 +70,21 @@ class Product extends Model
     public function deliveryIssues(): HasMany
     {
         return $this->hasMany(DeliveryIssue::class);
+    }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(ProductReview::class);
+    }
+
+    public function approvedReviews(): HasMany
+    {
+        return $this->hasMany(ProductReview::class)->where('is_approved', true);
+    }
+
+    public function featuredReviews(): HasMany
+    {
+        return $this->hasMany(ProductReview::class)->where('is_featured', true);
     }
 
     public function getCurrentPriceAttribute(): float
@@ -201,6 +217,244 @@ class Product extends Model
                 return $this->images ?? [];
             }
         );
+    }
+
+    /**
+     * Get the video URLs for the product
+     */
+    protected function videoUrls(): Attribute
+    {
+        return new Attribute(
+            get: function () {
+                if (!$this->videos || !is_array($this->videos)) {
+                    return [];
+                }
+
+                return collect($this->videos)->map(function ($videoPath) {
+                    return $this->getVideoUrl($videoPath);
+                })->toArray();
+            }
+        );
+    }
+
+    /**
+     * Get the primary video URL
+     */
+    protected function primaryVideoUrl(): Attribute
+    {
+        return new Attribute(
+            get: function () {
+                if (!$this->videos || !is_array($this->videos) || empty($this->videos)) {
+                    return $this->getDefaultVideoUrl();
+                }
+
+                return $this->getVideoUrl($this->videos[0]);
+            }
+        );
+    }
+
+    /**
+     * Get the full URL for a video path
+     */
+    public function getVideoUrl($videoPath)
+    {
+        if (!$videoPath) {
+            return $this->getDefaultVideoUrl();
+        }
+
+        // If it's already a full URL, return as is
+        if (filter_var($videoPath, FILTER_VALIDATE_URL)) {
+            return $videoPath;
+        }
+
+        // Generate URL for local storage
+        return Storage::disk('public')->url($videoPath);
+    }
+
+    /**
+     * Get the default video URL when no video is available
+     */
+    public function getDefaultVideoUrl()
+    {
+        return asset('images/no-video.svg');
+    }
+
+    /**
+     * Store uploaded videos and return the paths
+     */
+    public static function storeVideos($uploadedVideos, $productSlug = null)
+    {
+        if (!$uploadedVideos) {
+            return [];
+        }
+
+        $storedPaths = [];
+        $productSlug = $productSlug ?: 'products';
+
+        foreach ($uploadedVideos as $video) {
+            if ($video && $video->isValid()) {
+                // Generate unique filename
+                $extension = $video->getClientOriginalExtension();
+                $filename = time() . '_' . Str::random(10) . '.' . $extension;
+                
+                // Store in public storage under products directory
+                $path = $video->storeAs("products/{$productSlug}/videos", $filename, 'public');
+                $storedPaths[] = $path;
+            }
+        }
+
+        return $storedPaths;
+    }
+
+    /**
+     * Delete product videos from storage
+     */
+    public function deleteVideos()
+    {
+        if ($this->videos && is_array($this->videos)) {
+            foreach ($this->videos as $videoPath) {
+                if ($videoPath && Storage::disk('public')->exists($videoPath)) {
+                    Storage::disk('public')->delete($videoPath);
+                }
+            }
+        }
+    }
+
+    /**
+     * Get video paths for storage (without URLs)
+     */
+    protected function videoPaths(): Attribute
+    {
+        return new Attribute(
+            get: function () {
+                return $this->videos ?? [];
+            }
+        );
+    }
+
+    /**
+     * Get the average rating for the product
+     */
+    protected function averageRating(): Attribute
+    {
+        return new Attribute(
+            get: function () {
+                $avgRating = $this->approvedReviews()->avg('rating');
+                return $avgRating ? round($avgRating, 1) : 0;
+            }
+        );
+    }
+
+    /**
+     * Get the total number of reviews
+     */
+    protected function totalReviews(): Attribute
+    {
+        return new Attribute(
+            get: function () {
+                return $this->approvedReviews()->count();
+            }
+        );
+    }
+
+    /**
+     * Get the rating distribution
+     */
+    protected function ratingDistribution(): Attribute
+    {
+        return new Attribute(
+            get: function () {
+                $distribution = [];
+                $totalReviews = $this->total_reviews;
+                
+                if ($totalReviews === 0) {
+                    return [
+                        5 => 0, 4 => 0, 3 => 0, 2 => 0, 1 => 0
+                    ];
+                }
+
+                for ($i = 5; $i >= 1; $i--) {
+                    $count = $this->approvedReviews()->where('rating', $i)->count();
+                    $distribution[$i] = [
+                        'count' => $count,
+                        'percentage' => round(($count / $totalReviews) * 100, 1)
+                    ];
+                }
+
+                return $distribution;
+            }
+        );
+    }
+
+    /**
+     * Get recent reviews for the product
+     */
+    public function getRecentReviews($limit = 5)
+    {
+        return $this->approvedReviews()
+            ->with(['user:id,name'])
+            ->orderBy('reviewed_at', 'desc')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * Get featured reviews for the product
+     */
+    public function getFeaturedReviews($limit = 3)
+    {
+        return $this->featuredReviews()
+            ->with(['user:id,name'])
+            ->orderBy('reviewed_at', 'desc')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * Get reviews by rating
+     */
+    public function getReviewsByRating($rating, $limit = 10)
+    {
+        return $this->approvedReviews()
+            ->where('rating', $rating)
+            ->with(['user:id,name'])
+            ->orderBy('reviewed_at', 'desc')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * Check if user has reviewed this product
+     */
+    public function hasUserReviewed($userId): bool
+    {
+        return $this->reviews()->where('user_id', $userId)->exists();
+    }
+
+    /**
+     * Get user's review for this product
+     */
+    public function getUserReview($userId)
+    {
+        return $this->reviews()->where('user_id', $userId)->first();
+    }
+
+    /**
+     * Check if user can review this product
+     */
+    public function canUserReview($userId): bool
+    {
+        // User must have purchased this product and not already reviewed it
+        $hasPurchased = $this->orderItems()
+            ->whereHas('order', function ($query) use ($userId) {
+                $query->where('user_id', $userId)
+                      ->whereIn('status', ['delivered', 'completed']);
+            })
+            ->exists();
+
+        $hasReviewed = $this->hasUserReviewed($userId);
+
+        return $hasPurchased && !$hasReviewed;
     }
 
     /**

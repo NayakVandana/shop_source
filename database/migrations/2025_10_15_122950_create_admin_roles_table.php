@@ -16,7 +16,7 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->boolean('is_active')->default(true);
             $table->boolean('is_system')->default(false);
-            $table->json('permissions')->nullable(); // JSON array of permissions
+            // Note: permissions field removed as it's managed through pivot table
             $table->integer('sort_order')->default(0);
             $table->timestamps();
         });

@@ -75,6 +75,8 @@ class ProductController extends Controller
             $products->getCollection()->transform(function ($product) use ($request) {
                 $product->image_urls = $product->image_urls;
                 $product->primary_image_url = $product->primary_image_url;
+                $product->video_urls = $product->video_urls;
+                $product->primary_video_url = $product->primary_video_url;
                 
                 // Add delivery information if location provided
                 if ($request->has('latitude') && $request->has('longitude')) {
@@ -113,6 +115,8 @@ class ProductController extends Controller
             // Add image URLs and delivery info to response
             $product->image_urls = $product->image_urls;
             $product->primary_image_url = $product->primary_image_url;
+            $product->video_urls = $product->video_urls;
+            $product->primary_video_url = $product->primary_video_url;
             
             // Add delivery information if location provided
             if ($request->has('latitude') && $request->has('longitude')) {

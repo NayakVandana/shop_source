@@ -10,13 +10,12 @@ use Illuminate\Support\Str;
 class AdminRole extends Model
 {
     protected $fillable = [
-        'name', 'slug', 'description', 'is_active', 'is_system', 'permissions', 'sort_order', 'uuid'
+        'name', 'slug', 'description', 'is_active', 'is_system', 'sort_order', 'uuid'
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
         'is_system' => 'boolean',
-        'permissions' => 'array',
         'sort_order' => 'integer',
     ];
 
@@ -58,12 +57,7 @@ class AdminRole extends Model
             return true;
         }
 
-        // Check direct permissions
-        if ($this->permissions && in_array($permission, $this->permissions)) {
-            return true;
-        }
-
-        // Check role permissions
+        // Check role permissions through many-to-many relationship
         return $this->permissions()->where('slug', $permission)->exists();
     }
 
@@ -104,7 +98,6 @@ class AdminRole extends Model
                 'slug' => 'super-admin',
                 'description' => 'Full access to all features and settings',
                 'is_system' => true,
-                'permissions' => ['*'], // All permissions
                 'sort_order' => 1,
             ],
             [
@@ -112,11 +105,6 @@ class AdminRole extends Model
                 'slug' => 'product-manager',
                 'description' => 'Manage products, categories, and inventory',
                 'is_system' => true,
-                'permissions' => [
-                    'products.list', 'products.create', 'products.update', 'products.delete',
-                    'categories.list', 'categories.create', 'categories.update', 'categories.delete',
-                    'inventory.manage'
-                ],
                 'sort_order' => 2,
             ],
             [
@@ -124,10 +112,6 @@ class AdminRole extends Model
                 'slug' => 'order-manager',
                 'description' => 'Manage orders, deliveries, and customer service',
                 'is_system' => true,
-                'permissions' => [
-                    'orders.list', 'orders.update', 'orders.delete',
-                    'deliveries.manage', 'returns.manage', 'customers.manage'
-                ],
                 'sort_order' => 3,
             ],
             [
@@ -135,11 +119,6 @@ class AdminRole extends Model
                 'slug' => 'content-manager',
                 'description' => 'Manage content, discounts, and promotions',
                 'is_system' => true,
-                'permissions' => [
-                    'products.list', 'products.update',
-                    'discounts.list', 'discounts.create', 'discounts.update', 'discounts.delete',
-                    'coupons.list', 'coupons.create', 'coupons.update', 'coupons.delete'
-                ],
                 'sort_order' => 4,
             ],
             [
@@ -147,10 +126,6 @@ class AdminRole extends Model
                 'slug' => 'viewer',
                 'description' => 'View-only access to most features',
                 'is_system' => true,
-                'permissions' => [
-                    'products.list', 'orders.list', 'users.list',
-                    'categories.list', 'discounts.list', 'coupons.list'
-                ],
                 'sort_order' => 5,
             ],
         ];
@@ -161,13 +136,6 @@ class AdminRole extends Model
      */
     public function getPermissionsArrayAttribute()
     {
-        $permissions = $this->permissions ?? [];
-        
-        // Add role-based permissions
-        foreach ($this->permissions as $permission) {
-            $permissions[] = $permission->slug;
-        }
-
-        return array_unique($permissions);
+        return $this->permissions()->pluck('slug')->toArray();
     }
 }

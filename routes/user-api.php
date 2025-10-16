@@ -8,6 +8,7 @@ use App\Http\Controllers\user\OrderController as UserOrderController;
 use App\Http\Controllers\user\DiscountController as UserDiscountController;
 use App\Http\Controllers\user\CouponController as UserCouponController;
 use App\Http\Controllers\user\LocationController as UserLocationController;
+use App\Http\Controllers\user\UserReviewController;
 use Illuminate\Support\Facades\Route;
 
 // Public Routes - All POST methods
@@ -65,5 +66,18 @@ Route::middleware(['user.verify', 'uuid.validate'])->group(function () {
     // Return Management
     Route::post('/returns/request', [UserOrderController::class, 'requestReturn']);
     Route::post('/returns/list', [UserOrderController::class, 'getReturns']);
+    Route::post('/returns/cancel', [UserOrderController::class, 'cancelReturn']);
     Route::post('/returns/reasons', [UserOrderController::class, 'getReturnReasons']);
+    Route::post('/returns/returnable-items', [UserOrderController::class, 'getReturnableItems']);
+
+    // Review Management
+    Route::post('/reviews/list', [UserReviewController::class, 'index']);
+    Route::post('/reviews/create', [UserReviewController::class, 'store']);
+    Route::post('/reviews/show', [UserReviewController::class, 'show']);
+    Route::post('/reviews/update', [UserReviewController::class, 'update']);
+    Route::post('/reviews/delete', [UserReviewController::class, 'destroy']);
+    Route::post('/reviews/product-reviews', [UserReviewController::class, 'getProductReviews']);
+    Route::post('/reviews/vote-helpful', [UserReviewController::class, 'voteHelpful']);
+    Route::post('/reviews/remove-vote', [UserReviewController::class, 'removeVote']);
+    Route::post('/reviews/product-rating-summary', [UserReviewController::class, 'getProductRatingSummary']);
 });
