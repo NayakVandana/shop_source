@@ -1,15 +1,12 @@
 // @ts-nocheck
 import React, { useState } from 'react';
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
 import { FormEvent } from 'react';
-import GuestLayout from '../Layouts/GuestLayout';
+import GuestLayout from '../../Layouts/GuestLayout';
 
-export default function Login() {
-    const { auth } = usePage().props;
+export default function AdminLogin() {
     const [formData, setFormData] = useState({
-        email: '',
-        password: '',
-        login_with: 'PASSWORD',
+        user_id: '',
         login_type: 'web'
     });
     const [error, setError] = useState('');
@@ -20,8 +17,7 @@ export default function Login() {
         setError('');
         setProcessing(true);
         
-        // Use regular form submission since the API returns JSON
-        fetch('/api/user/login', {
+        fetch('/api/admin/login', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -38,14 +34,14 @@ export default function Login() {
             if (data.status) {
                 // Store the token if provided
                 if (data.data && data.data.access_token) {
-                    localStorage.setItem('auth_token', data.data.access_token);
+                    localStorage.setItem('admin_token', data.data.access_token);
                 }
-                // Redirect to dashboard with token
+                // Redirect to admin dashboard with token
                 const token = data.data?.access_token || '';
                 if (token) {
-                    window.location.href = `/dashboard?token=${token}`;
+                    window.location.href = `/admin/dashboard?token=${token}`;
                 } else {
-                    window.location.href = '/dashboard';
+                    window.location.href = '/admin/dashboard';
                 }
             } else {
                 // Show error messages
@@ -60,22 +56,16 @@ export default function Login() {
     };
 
     return (
-        <GuestLayout user={auth.user}>
-            <Head title="Login" />
+        <GuestLayout>
+            <Head title="Admin Login" />
             <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
                 <div className="max-w-md w-full space-y-8">
                     <div>
                         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-                            Sign in to your account
+                            Admin Sign In
                         </h2>
                         <p className="mt-2 text-center text-sm text-gray-600">
-                            Or{' '}
-                            <Link
-                                href="/register"
-                                className="font-medium text-indigo-600 hover:text-indigo-500"
-                            >
-                                create a new account
-                            </Link>
+                            Sign in to access the admin panel
                         </p>
                     </div>
                     <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
@@ -87,37 +77,22 @@ export default function Login() {
                         
                         <div className="space-y-4">
                             <div>
-                                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                                    Email Address
+                                <label htmlFor="user_id" className="block text-sm font-medium text-gray-700">
+                                    Admin User ID
                                 </label>
                                 <input
-                                    id="email"
-                                    name="email"
-                                    type="email"
-                                    autoComplete="email"
+                                    id="user_id"
+                                    name="user_id"
+                                    type="number"
                                     required
                                     className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                                    placeholder="Enter your email"
-                                    value={formData.email}
-                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                    placeholder="Enter your admin user ID"
+                                    value={formData.user_id}
+                                    onChange={(e) => setFormData({ ...formData, user_id: e.target.value })}
                                 />
-                            </div>
-                            
-                            <div>
-                                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                                    Password
-                                </label>
-                                <input
-                                    id="password"
-                                    name="password"
-                                    type="password"
-                                    autoComplete="current-password"
-                                    required
-                                    className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                                    placeholder="Enter your password"
-                                    value={formData.password}
-                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                />
+                                <p className="mt-1 text-xs text-gray-500">
+                                    Enter your admin user ID
+                                </p>
                             </div>
                         </div>
 
@@ -136,3 +111,4 @@ export default function Login() {
         </GuestLayout>
     );
 }
+

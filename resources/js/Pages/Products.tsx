@@ -1,14 +1,15 @@
 // @ts-nocheck
 import React from 'react';
-import { Head, Link } from '@inertiajs/react';
-import Navigation from '../Components/Navigation';
+import { Head, Link, usePage } from '@inertiajs/react';
+import UserLayout from '../Layouts/UserLayout';
+import GuestLayout from '../Layouts/GuestLayout';
 
-export default function Products({ products, user }) {
-    return (
-        <>
-            <Head title="Products" />
-            <Navigation user={user} />
-            <div className="min-h-screen bg-gray-50">
+export default function Products({ products }) {
+    const { auth } = usePage().props;
+    const user = auth.user;
+    
+    const content = (
+        <div className="min-h-screen bg-gray-50">
                 <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-12">
                         <h1 className="text-4xl font-bold text-gray-900 sm:text-5xl md:text-6xl">
@@ -65,6 +66,20 @@ export default function Products({ products, user }) {
                     )}
                 </div>
             </div>
+    );
+
+    return (
+        <>
+            <Head title="Products" />
+            {user ? (
+                <UserLayout user={user}>
+                    {content}
+                </UserLayout>
+            ) : (
+                <GuestLayout user={user}>
+                    {content}
+                </GuestLayout>
+            )}
         </>
     );
 }

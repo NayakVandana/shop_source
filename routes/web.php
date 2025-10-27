@@ -31,7 +31,17 @@ Route::get('/register', function () {
     return Inertia::render('Register');
 })->name('register');
 
-// Dashboard (Protected)
+// User Dashboard (Protected)
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
 })->name('dashboard');
+
+// Admin Authentication
+Route::get('/admin/login', function () {
+    return Inertia::render('Admin/AdminLogin');
+})->name('admin.login');
+
+// Admin Dashboard (Protected)
+Route::get('/admin/dashboard', function () {
+    return Inertia::render('Admin/AdminDashboard');
+})->name('admin.dashboard');

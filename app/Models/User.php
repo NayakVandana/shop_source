@@ -76,21 +76,4 @@ class User extends Authenticatable
     {
         return $this->is_admin && $this->role === 'super_admin';
     }
-
-    /**
-     * Create admin token
-     */
-    public function createAdminToken()
-    {
-        // Generate a simple token for admin access
-        $token = Str::random(60);
-        
-        // Store token in user_tokens table
-        $this->userToken()->updateOrCreate(
-            ['user_id' => $this->id],
-            ['web_access_token' => $token]
-        );
-        
-        return $token;
-    }
 }

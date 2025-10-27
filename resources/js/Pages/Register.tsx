@@ -1,28 +1,58 @@
 // @ts-nocheck
-import React from 'react';
-import { Head, Link, useForm } from '@inertiajs/react';
+import React, { useState } from 'react';
+import { Head, Link } from '@inertiajs/react';
 import { FormEvent } from 'react';
+import GuestLayout from '../Layouts/GuestLayout';
 
-export default function Register({}) {
-    const { data, setData, post, processing, errors, reset } = useForm({
+export default function Register() {
+    const [formData, setFormData] = useState({
         name: '',
         email: '',
         mobile: ''
     });
+    const [error, setError] = useState('');
+    const [processing, setProcessing] = useState(false);
 
     const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        post('/register', {
-            onSuccess: () => {
-                reset();
+        setError('');
+        setProcessing(true);
+        
+        fetch('/api/user/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
             },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            setProcessing(false);
+            if (data.status) {
+                // Store the token if provided
+                if (data.data && data.data.access_token) {
+                    localStorage.setItem('auth_token', data.data.access_token);
+                }
+                // Redirect to dashboard
+                window.location.href = '/dashboard';
+            } else {
+                // Show error messages
+                setError(data.message || 'Registration failed');
+            }
+        })
+        .catch(error => {
+            setProcessing(false);
+            console.error('Registration error:', error);
+            setError('An error occurred during registration');
         });
     };
 
     return (
-        <>
+        <GuestLayout>
             <Head title="Register" />
-            <div className="flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
                 <div className="max-w-md w-full space-y-8">
                     <div>
                         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
@@ -39,21 +69,9 @@ export default function Register({}) {
                         </p>
                     </div>
                     <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-                        {errors.name && (
+                        {error && (
                             <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md">
-                                {errors.name}
-                            </div>
-                        )}
-                        
-                        {errors.email && (
-                            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md">
-                                {errors.email}
-                            </div>
-                        )}
-                        
-                        {errors.mobile && (
-                            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md">
-                                {errors.mobile}
+                                {error}
                             </div>
                         )}
                         
@@ -69,8 +87,8 @@ export default function Register({}) {
                                     required
                                     className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                                     placeholder="Enter your full name"
-                                    value={data.name}
-                                    onChange={(e) => setData('name', e.target.value)}
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                 />
                             </div>
                             
@@ -86,8 +104,8 @@ export default function Register({}) {
                                     required
                                     className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                                     placeholder="Enter your email"
-                                    value={data.email}
-                                    onChange={(e) => setData('email', e.target.value)}
+                                    value={formData.email}
+                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                 />
                             </div>
                             
@@ -102,8 +120,8 @@ export default function Register({}) {
                                     required
                                     className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                                     placeholder="Enter your mobile number"
-                                    value={data.mobile}
-                                    onChange={(e) => setData('mobile', e.target.value)}
+                                    value={formData.mobile}
+                                    onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
                                 />
                             </div>
                         </div>
@@ -120,6 +138,6 @@ export default function Register({}) {
                     </form>
                 </div>
             </div>
-        </>
+        </GuestLayout>
     );
 }

@@ -4,6 +4,7 @@ namespace App\Traits;
 
 use App\Models\UserToken;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Str;
 
 trait UserTokenTraits
 {
@@ -12,7 +13,7 @@ trait UserTokenTraits
      */
     public function createWebToken()
     {
-        $token = $this->createToken('web-token', ['web'])->plainTextToken;
+        $token = Str::random(60);
         
         // Store token in user_tokens table
         $this->userToken()->updateOrCreate(
@@ -28,7 +29,7 @@ trait UserTokenTraits
      */
     public function createAppToken($deviceToken = null, $deviceType = null)
     {
-        $token = $this->createToken('app-token', ['app'])->plainTextToken;
+        $token = Str::random(60);
         
         // Store token in user_tokens table
         $this->userToken()->updateOrCreate(

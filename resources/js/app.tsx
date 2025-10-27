@@ -5,11 +5,6 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import '../css/app.css';
 import './react-refresh-runtime';
 
-// React Refresh preamble setup
-if (import.meta.hot) {
-    import.meta.hot.accept();
-}
-
 const appName = import.meta.env.VITE_APP_NAME || 'ShopSource';
 
 createInertiaApp({

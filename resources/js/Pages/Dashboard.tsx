@@ -1,13 +1,15 @@
 // @ts-nocheck
 import React from 'react';
-import { Head } from '@inertiajs/react';
-import Navigation from '../Components/Navigation';
+import { Head, usePage } from '@inertiajs/react';
+import UserLayout from '../Layouts/UserLayout';
 
-export default function Dashboard({ stats, recent_products, top_categories, user }) {
+export default function Dashboard({ stats, recent_products, top_categories }) {
+    const { auth } = usePage().props;
+    const user = auth.user;
+
     return (
-        <>
+        <UserLayout user={user}>
             <Head title="Dashboard" />
-            <Navigation user={user} />
             <div className="min-h-screen bg-gray-50">
                 <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
                     <h1 className="text-4xl font-bold text-gray-900 mb-8">
@@ -82,7 +84,7 @@ export default function Dashboard({ stats, recent_products, top_categories, user
                     </div>
                 </div>
             </div>
-        </>
+        </UserLayout>
     );
 }
 
