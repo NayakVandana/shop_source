@@ -104,7 +104,7 @@ class ProductController extends Controller
         }
     }
 
-    public function featured()
+    public function featured(Request $request)
     {
         try {
             $products = Product::with('category')

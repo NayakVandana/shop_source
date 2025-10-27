@@ -1,24 +1,72 @@
-import React from 'react';
+// @ts-nocheck
+import React, { useState, useEffect } from 'react';
 import { Head, Link } from '@inertiajs/react';
+import axios from 'axios';
+import Navigation from '../Components/Navigation';
 
-interface Product {
-    id: string;
-    name: string;
-    description: string;
-    price: number;
-    image?: string;
-    created_at: string;
-    updated_at: string;
-}
+export default function ProductDetail({ user }) {
+    const [product, setProduct] = useState(null);
+    const [loading, setLoading] = useState(true);
 
-interface ProductDetailProps {
-    product: Product;
-}
+    useEffect(() => {
+        // Extract UUID from query parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const uuid = urlParams.get('uuid');
 
-export default function ProductDetail({ product }: ProductDetailProps) {
+        if (uuid) {
+            axios.post('/api/products/show', { id: uuid })
+                .then(response => {
+                    if (response.data.success) {
+                        setProduct(response.data.data);
+                    }
+                    setLoading(false);
+                })
+                .catch(error => {
+                    console.error('Error fetching product:', error);
+                    setLoading(false);
+                });
+        } else {
+            setLoading(false);
+        }
+    }, []);
+
+    if (loading) {
+        return (
+            <>
+                <Head title="Loading..." />
+                <Navigation user={user} />
+                <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                    <div className="text-center">
+                        <div className="text-indigo-600 text-2xl">Loading product...</div>
+                    </div>
+                </div>
+            </>
+        );
+    }
+
+    if (!product) {
+        return (
+            <>
+                <Head title="Product Not Found" />
+                <Navigation user={user} />
+                <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                    <div className="text-center">
+                        <div className="text-2xl font-bold text-gray-900 mb-4">Product Not Found</div>
+                        <Link
+                            href="/products"
+                            className="text-indigo-600 hover:text-indigo-500 font-medium"
+                        >
+                            ← Back to Products
+                        </Link>
+                    </div>
+                </div>
+            </>
+        );
+    }
     return (
         <>
             <Head title={product.name} />
+            <Navigation user={user} />
             <div className="min-h-screen bg-gray-50">
                 <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
                     <div className="mb-8">

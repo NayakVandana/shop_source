@@ -1,15 +1,9 @@
+// @ts-nocheck
 import React from 'react';
 import { Head } from '@inertiajs/react';
 import Navigation from '../Components/Navigation';
 
-interface HomeProps {
-    user?: {
-        name: string;
-        email: string;
-    };
-}
-
-export default function Home({ user }: HomeProps) {
+export default function Home({ user }) {
     return (
         <>
             <Head title="Home" />

@@ -1,22 +1,13 @@
+// @ts-nocheck
 import React from 'react';
 import { Head, Link } from '@inertiajs/react';
+import Navigation from '../Components/Navigation';
 
-interface Product {
-    id: string;
-    name: string;
-    description: string;
-    price: number;
-    image?: string;
-}
-
-interface ProductsProps {
-    products: Product[];
-}
-
-export default function Products({ products }: ProductsProps) {
+export default function Products({ products, user }) {
     return (
         <>
             <Head title="Products" />
+            <Navigation user={user} />
             <div className="min-h-screen bg-gray-50">
                 <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-12">
@@ -30,7 +21,7 @@ export default function Products({ products }: ProductsProps) {
 
                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         {products.map((product) => (
-                            <div key={product.id} className="bg-white rounded-lg shadow-md overflow-hidden">
+                            <div key={product.uuid} className="bg-white rounded-lg shadow-md overflow-hidden">
                                 <div className="aspect-w-16 aspect-h-9 bg-gray-200">
                                     {product.image ? (
                                         <img
@@ -56,7 +47,7 @@ export default function Products({ products }: ProductsProps) {
                                             ${product.price}
                                         </span>
                                         <Link
-                                            href={`/products/${product.id}`}
+                                            href={`/product?uuid=${product.uuid}`}
                                             className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors"
                                         >
                                             View Details

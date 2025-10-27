@@ -15,7 +15,7 @@ class ProductController extends Controller
     /**
      * Display a listing of the resource
      */
-    public function index(Request $request): JsonResponse
+    public function index(Request $request)
     {
         try {
             $query = Product::with('category');
@@ -48,11 +48,7 @@ class ProductController extends Controller
             $perPage = $request->get('per_page', 15);
             $products = $query->paginate($perPage);
             
-            return response()->json([
-                'status' => true,
-                'message' => 'Products retrieved successfully',
-                'data' => $products
-            ]);
+            return $this->sendJsonResponse(true, 'Products retrieved successfully', $products);
             
         } catch (Exception $e) {
             return $this->sendError($e);
@@ -62,7 +58,7 @@ class ProductController extends Controller
     /**
      * Store a newly created resource
      */
-    public function store(Request $request): JsonResponse
+    public function store(Request $request)
     {
         try {
             $validator = Validator::make($request->all(), [
@@ -76,11 +72,7 @@ class ProductController extends Controller
             ]);
 
             if ($validator->fails()) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Validation failed',
-                    'errors' => $validator->errors()
-                ], 422);
+                return $this->sendJsonResponse(false, 'Validation failed', $validator->errors(), 422);
             }
 
             $data = $request->all();
@@ -94,11 +86,7 @@ class ProductController extends Controller
             $product = Product::create($data);
             $product->load('category');
 
-            return response()->json([
-                'status' => true,
-                'message' => 'Product created successfully',
-                'data' => $product
-            ], 201);
+            return $this->sendJsonResponse(true, 'Product created successfully', $product, 201);
             
         } catch (Exception $e) {
             return $this->sendError($e);
@@ -108,16 +96,16 @@ class ProductController extends Controller
     /**
      * Display the specified resource
      */
-    public function show(Product $product): JsonResponse
+    public function show(Request $request)
     {
         try {
-            $product->load('category');
-            
-            return response()->json([
-                'status' => true,
-                'message' => 'Product retrieved successfully',
-                'data' => $product
+            $data = $request->validate([
+                'id' => 'required|string'
             ]);
+
+            $product = Product::with('category')->where('uuid', $data['id'])->firstOrFail();
+            
+            return $this->sendJsonResponse(true, 'Product retrieved successfully', $product);
             
         } catch (Exception $e) {
             return $this->sendError($e);
@@ -127,9 +115,15 @@ class ProductController extends Controller
     /**
      * Update the specified resource
      */
-    public function update(Request $request, Product $product): JsonResponse
+    public function update(Request $request)
     {
         try {
+            $data = $request->validate([
+                'id' => 'required|string'
+            ]);
+
+            $product = Product::where('uuid', $data['id'])->firstOrFail();
+
             $validator = Validator::make($request->all(), [
                 'name' => 'sometimes|required|string|max:255',
                 'description' => 'nullable|string',
@@ -141,14 +135,10 @@ class ProductController extends Controller
             ]);
 
             if ($validator->fails()) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Validation failed',
-                    'errors' => $validator->errors()
-                ], 422);
+                return $this->sendJsonResponse(false, 'Validation failed', $validator->errors(), 422);
             }
 
-            $data = $request->all();
+            $updateData = $request->except(['id']);
             
             // Handle image upload
             if ($request->hasFile('image')) {
@@ -158,17 +148,13 @@ class ProductController extends Controller
                 }
                 
                 $imagePath = $request->file('image')->store('products', 'public');
-                $data['image'] = $imagePath;
+                $updateData['image'] = $imagePath;
             }
 
-            $product->update($data);
+            $product->update($updateData);
             $product->load('category');
 
-            return response()->json([
-                'status' => true,
-                'message' => 'Product updated successfully',
-                'data' => $product
-            ]);
+            return $this->sendJsonResponse(true, 'Product updated successfully', $product);
             
         } catch (Exception $e) {
             return $this->sendError($e);
@@ -178,9 +164,15 @@ class ProductController extends Controller
     /**
      * Remove the specified resource
      */
-    public function destroy(Product $product): JsonResponse
+    public function destroy(Request $request)
     {
         try {
+            $data = $request->validate([
+                'id' => 'required|string'
+            ]);
+
+            $product = Product::where('uuid', $data['id'])->firstOrFail();
+
             // Delete associated image
             if ($product->image) {
                 \Illuminate\Support\Facades\Storage::disk('public')->delete($product->image);
@@ -188,10 +180,7 @@ class ProductController extends Controller
             
             $product->delete();
 
-            return response()->json([
-                'status' => true,
-                'message' => 'Product deleted successfully'
-            ]);
+            return $this->sendJsonResponse(true, 'Product deleted successfully', null);
             
         } catch (Exception $e) {
             return $this->sendError($e);

@@ -52,7 +52,7 @@ class AuthController extends Controller
             if ($userToken) {
                 $userToken->delete();
             }
-            return $this->sendJsonResponse(true, 'Admin logged out successfully');
+            return $this->sendJsonResponse(true, 'Admin logged out successfully', null, 200);
         } catch (Exception $e) {
             return $this->sendError($e);
         }
@@ -62,7 +62,7 @@ class AuthController extends Controller
     {
         try {
             $user = auth()->user();
-            return $this->sendJsonResponse(true, 'Admin profile', $user);
+            return $this->sendJsonResponse(true, 'Admin profile', $user, 200);
         } catch (Exception $e) {
             return $this->sendError($e);
         }

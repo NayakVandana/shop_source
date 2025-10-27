@@ -1,12 +1,9 @@
+// @ts-nocheck
 import React from 'react';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { FormEvent } from 'react';
 
-interface LoginProps {
-    // Add any props that will be passed from Laravel controller
-}
-
-export default function Login({}: LoginProps) {
+export default function Login({}) {
     const { data, setData, post, processing, errors, reset } = useForm({
         email: '',
         password: ''

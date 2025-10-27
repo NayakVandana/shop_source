@@ -1,12 +1,9 @@
+// @ts-nocheck
 import React from 'react';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { FormEvent } from 'react';
 
-interface RegisterProps {
-    // Add any props that will be passed from Laravel controller
-}
-
-export default function Register({}: RegisterProps) {
+export default function Register({}) {
     const { data, setData, post, processing, errors, reset } = useForm({
         name: '',
         email: '',

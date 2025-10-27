@@ -14,7 +14,7 @@ class CategoryController extends Controller
     /**
      * Display a listing of the resource
      */
-    public function index(Request $request): JsonResponse
+    public function index(Request $request)
     {
         try {
             $query = Category::query();
@@ -33,11 +33,7 @@ class CategoryController extends Controller
             $perPage = $request->get('per_page', 15);
             $categories = $query->paginate($perPage);
             
-            return response()->json([
-                'status' => true,
-                'message' => 'Categories retrieved successfully',
-                'data' => $categories
-            ]);
+            return $this->sendJsonResponse(true, 'Categories retrieved successfully', $categories);
             
         } catch (Exception $e) {
             return $this->sendError($e);
@@ -47,7 +43,7 @@ class CategoryController extends Controller
     /**
      * Store a newly created resource
      */
-    public function store(Request $request): JsonResponse
+    public function store(Request $request)
     {
         try {
             $validator = Validator::make($request->all(), [
@@ -59,11 +55,7 @@ class CategoryController extends Controller
             ]);
 
             if ($validator->fails()) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Validation failed',
-                    'errors' => $validator->errors()
-                ], 422);
+                return $this->sendJsonResponse(false, 'Validation failed', $validator->errors(), 422);
             }
 
             $data = $request->all();
@@ -81,11 +73,7 @@ class CategoryController extends Controller
 
             $category = Category::create($data);
 
-            return response()->json([
-                'status' => true,
-                'message' => 'Category created successfully',
-                'data' => $category
-            ], 201);
+            return $this->sendJsonResponse(true, 'Category created successfully', $category, 201);
             
         } catch (Exception $e) {
             return $this->sendError($e);
@@ -95,16 +83,17 @@ class CategoryController extends Controller
     /**
      * Display the specified resource
      */
-    public function show(Category $category): JsonResponse
+    public function show(Request $request)
     {
         try {
+            $data = $request->validate([
+                'id' => 'required|string'
+            ]);
+
+            $category = Category::where('uuid', $data['id'])->firstOrFail();
             $category->loadCount('products');
             
-            return response()->json([
-                'status' => true,
-                'message' => 'Category retrieved successfully',
-                'data' => $category
-            ]);
+            return $this->sendJsonResponse(true, 'Category retrieved successfully', $category);
             
         } catch (Exception $e) {
             return $this->sendError($e);
@@ -114,9 +103,15 @@ class CategoryController extends Controller
     /**
      * Update the specified resource
      */
-    public function update(Request $request, Category $category): JsonResponse
+    public function update(Request $request)
     {
         try {
+            $data = $request->validate([
+                'id' => 'required|string'
+            ]);
+
+            $category = Category::where('uuid', $data['id'])->firstOrFail();
+
             $validator = Validator::make($request->all(), [
                 'name' => 'sometimes|required|string|max:255',
                 'description' => 'nullable|string',
@@ -126,14 +121,10 @@ class CategoryController extends Controller
             ]);
 
             if ($validator->fails()) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Validation failed',
-                    'errors' => $validator->errors()
-                ], 422);
+                return $this->sendJsonResponse(false, 'Validation failed', $validator->errors(), 422);
             }
 
-            $data = $request->all();
+            $updateData = $request->except(['id']);
             
             // Handle image upload
             if ($request->hasFile('image')) {
@@ -143,16 +134,12 @@ class CategoryController extends Controller
                 }
                 
                 $imagePath = $request->file('image')->store('categories', 'public');
-                $data['image'] = $imagePath;
+                $updateData['image'] = $imagePath;
             }
 
-            $category->update($data);
+            $category->update($updateData);
 
-            return response()->json([
-                'status' => true,
-                'message' => 'Category updated successfully',
-                'data' => $category
-            ]);
+            return $this->sendJsonResponse(true, 'Category updated successfully', $category);
             
         } catch (Exception $e) {
             return $this->sendError($e);
@@ -162,15 +149,18 @@ class CategoryController extends Controller
     /**
      * Remove the specified resource
      */
-    public function destroy(Category $category): JsonResponse
+    public function destroy(Request $request)
     {
         try {
+            $data = $request->validate([
+                'id' => 'required|string'
+            ]);
+
+            $category = Category::where('uuid', $data['id'])->firstOrFail();
+
             // Check if category has products
             if ($category->products()->count() > 0) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Cannot delete category with existing products'
-                ], 422);
+                return $this->sendJsonResponse(false, 'Cannot delete category with existing products', null, 422);
             }
             
             // Delete associated image
@@ -180,10 +170,7 @@ class CategoryController extends Controller
             
             $category->delete();
 
-            return response()->json([
-                'status' => true,
-                'message' => 'Category deleted successfully'
-            ]);
+            return $this->sendJsonResponse(true, 'Category deleted successfully', null);
             
         } catch (Exception $e) {
             return $this->sendError($e);
@@ -193,9 +180,14 @@ class CategoryController extends Controller
     /**
      * Get products for a specific category
      */
-    public function products(Category $category, Request $request): JsonResponse
+    public function products(Request $request)
     {
         try {
+            $data = $request->validate([
+                'category_id' => 'required|string'
+            ]);
+
+            $category = Category::where('uuid', $data['category_id'])->firstOrFail();
             $query = $category->products();
             
             // Search functionality
@@ -221,13 +213,9 @@ class CategoryController extends Controller
             $perPage = $request->get('per_page', 15);
             $products = $query->paginate($perPage);
             
-            return response()->json([
-                'status' => true,
-                'message' => 'Category products retrieved successfully',
-                'data' => [
-                    'category' => $category,
-                    'products' => $products
-                ]
+            return $this->sendJsonResponse(true, 'Category products retrieved successfully', [
+                'category' => $category,
+                'products' => $products
             ]);
             
         } catch (Exception $e) {

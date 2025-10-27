@@ -95,7 +95,7 @@ class AuthController extends Controller
             // Placeholder: Dispatch UserLoggedin event
             // UserLoggedin::dispatch($user);
 
-            return $this->sendJsonResponse(true, 'Login Successfully', $user);
+            return $this->sendJsonResponse(true, 'Login Successfully', $user, 200);
         } catch (Exception $e) {
             return $this->sendError($e);
         }
@@ -124,11 +124,9 @@ class AuthController extends Controller
             ]);
 
             $token = $user->createWebToken();
+            $user->access_token = $token;
 
-            return $this->sendJsonResponse(true, 'Registered Successfully', [
-                'user' => $user,
-                'access_token' => $token
-            ], 201);
+            return $this->sendJsonResponse(true, 'Registered Successfully', $user, 201);
         } catch (Exception $e) {
             return $this->sendError($e);
         }
@@ -142,7 +140,7 @@ class AuthController extends Controller
             if ($userToken) {
                 $userToken->delete();
             }
-            return $this->sendJsonResponse(true, 'Logged out successfully');
+            return $this->sendJsonResponse(true, 'Logged out successfully', null, 200);
         } catch (Exception $e) {
             return $this->sendError($e);
         }
@@ -155,7 +153,7 @@ class AuthController extends Controller
             // Optionally, load relationships
             // $user->load('posts', 'roles');
 
-            return $this->sendJsonResponse(true, 'Profile', $user);
+            return $this->sendJsonResponse(true, 'Profile', $user, 200);
         } catch (Exception $e) {
             return $this->sendError($e);
         }

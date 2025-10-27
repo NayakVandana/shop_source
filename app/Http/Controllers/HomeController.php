@@ -2,14 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use Inertia\Inertia;
+use App\Models\Product;
+use Illuminate\Http\Request;
 
 class HomeController extends Controller
 {
-    public function index()
-    {
-        return Inertia::render('Home', [
-            'user' => auth()->user()
-        ]);
-    }
+    // This controller can be used for API endpoints or other non-Inertia responses
 }
+
