@@ -3,14 +3,14 @@ import React from 'react';
 import { usePage } from '@inertiajs/react';
 import Navigation from '../Components/Navigation';
 
-export default function GuestLayout({ children, user }) {
+export default function GuestLayout({ children }) {
     const { auth } = usePage().props;
-    const currentUser = user || auth.user;
+    const user = auth.user;
 
     return (
-        <div className="min-h-screen flex flex-col">
+        <div className="min-h-screen flex flex-col bg-gray-50">
             {/* Navigation */}
-            <Navigation user={currentUser} />
+            <Navigation user={user} />
 
             {/* Main Content */}
             <main className="flex-1">

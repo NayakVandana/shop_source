@@ -40,12 +40,12 @@ export default function Login() {
                 if (data.data && data.data.access_token) {
                     localStorage.setItem('auth_token', data.data.access_token);
                 }
-                // Redirect to dashboard with token
+                // Redirect to products page by default (include token if present)
                 const token = data.data?.access_token || '';
                 if (token) {
-                    window.location.href = `/dashboard?token=${token}`;
+                    window.location.href = `/products?token=${token}`;
                 } else {
-                    window.location.href = '/dashboard';
+                    window.location.href = '/products';
                 }
             } else {
                 // Show error messages
@@ -60,7 +60,7 @@ export default function Login() {
     };
 
     return (
-        <GuestLayout user={auth.user}>
+        <GuestLayout>
             <Head title="Login" />
             <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
                 <div className="max-w-md w-full space-y-8">

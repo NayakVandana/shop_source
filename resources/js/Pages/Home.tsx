@@ -10,7 +10,7 @@ export default function Home() {
     // Determine which layout to use based on authentication
     if (user) {
         return (
-            <UserLayout user={user}>
+            <UserLayout>
                 <Head title="Home" />
                 <div className="min-h-screen bg-gray-50">
                 <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
@@ -47,7 +47,7 @@ export default function Home() {
     }
 
     return (
-        <GuestLayout user={user}>
+        <GuestLayout>
             <Head title="Home" />
             <div className="min-h-screen bg-gray-50">
                 <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">

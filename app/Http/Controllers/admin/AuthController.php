@@ -48,10 +48,19 @@ class AuthController extends Controller
     {
         try {
             $user = $request->user();
-            $userToken = UserToken::where('user_id', $user->id)->first();
-            if ($userToken) {
-                $userToken->delete();
+
+            if ($user) {
+                $userToken = UserToken::where('user_id', $user->id)->first();
+                if ($userToken) {
+                    $userToken->delete();
+                }
             }
+
+            // Logout admin guard as well
+            \Illuminate\Support\Facades\Auth::guard('admin')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
             return $this->sendJsonResponse(true, 'Admin logged out successfully', null, 200);
         } catch (Exception $e) {
             return $this->sendError($e);

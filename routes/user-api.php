@@ -4,7 +4,7 @@ use App\Http\Controllers\auth\AuthController;
 use App\Http\Controllers\user\ProductController as UserProductController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('api/user')->group(function () {
+
     
     // Public Routes
     Route::post('/login', [AuthController::class, 'login']);
@@ -24,4 +24,4 @@ Route::prefix('api/user')->group(function () {
         Route::post('/profile', [AuthController::class, 'profile']);
         
     });
-});
+

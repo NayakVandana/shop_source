@@ -1,12 +1,22 @@
 // @ts-nocheck
-import React, { useState } from 'react';
-import { Link } from '@inertiajs/react';
+import React, { useState, useEffect } from 'react';
+import { Link, usePage } from '@inertiajs/react';
 
-export default function AdminLayout({ children, user }) {
+export default function AdminLayout({ children }) {
+    const { auth } = usePage().props;
+    const user = auth.user;
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [mounted, setMounted] = useState(false);
+    
+    // Ensure component is mounted before accessing localStorage
+    useEffect(() => {
+        setMounted(true);
+    }, []);
     
     // Get admin token from localStorage and URL
     const getAdminToken = () => {
+        if (!mounted) return '';
+        
         // Try to get from URL first (for initial redirect)
         const urlParams = new URLSearchParams(window.location.search);
         const urlToken = urlParams.get('token');
@@ -21,9 +31,11 @@ export default function AdminLayout({ children, user }) {
     const tokenParam = adminToken ? `?token=${adminToken}` : '';
     
     // Update localStorage with token from URL if present
-    if (adminToken) {
-        localStorage.setItem('admin_token', adminToken);
-    }
+    useEffect(() => {
+        if (adminToken && mounted) {
+            localStorage.setItem('admin_token', adminToken);
+        }
+    }, [adminToken, mounted]);
 
     return (
         <div className="min-h-screen bg-gray-50 flex">
@@ -86,7 +98,7 @@ export default function AdminLayout({ children, user }) {
                     </nav>
 
                     {/* User Info */}
-                    {user && (
+                    {user && user.name ? (
                         <div className="border-t border-gray-800 px-4 py-4">
                             <div className="flex items-center">
                                 <div className="h-10 w-10 bg-indigo-600 rounded-full flex items-center justify-center">
@@ -97,6 +109,18 @@ export default function AdminLayout({ children, user }) {
                                 <div className="ml-3">
                                     <p className="text-sm font-medium text-white">{user.name}</p>
                                     <p className="text-xs text-gray-400">Administrator</p>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="border-t border-gray-800 px-4 py-4">
+                            <div className="flex items-center">
+                                <div className="h-10 w-10 bg-gray-700 rounded-full flex items-center justify-center">
+                                    <span className="text-gray-300 text-sm font-medium">...</span>
+                                </div>
+                                <div className="ml-3">
+                                    <p className="text-sm font-medium text-gray-300">Loading...</p>
+                                    <p className="text-xs text-gray-500">Admin</p>
                                 </div>
                             </div>
                         </div>
@@ -120,9 +144,42 @@ export default function AdminLayout({ children, user }) {
 
                         <div className="flex items-center space-x-4 ml-auto">
                             <button
-                                onClick={() => {
-                                    localStorage.removeItem('admin_token');
-                                    window.location.href = '/admin/login';
+                                onClick={async () => {
+                                    try {
+                                        const urlParams = new URLSearchParams(window.location.search);
+                                        const qpToken = urlParams.get('token');
+                                        const adminToken = localStorage.getItem('admin_token') || '';
+                                        const token = qpToken || adminToken || '';
+
+                                        if (token) {
+                                            await fetch('/api/admin/logout', {
+                                                method: 'POST',
+                                                headers: {
+                                                    'Accept': 'application/json',
+                                                    'AdminToken': token,
+                                                    'X-Requested-With': 'XMLHttpRequest'
+                                                },
+                                                credentials: 'include'
+                                            }).catch(() => {});
+                                        }
+                                    } catch (_) {}
+
+                                    try {
+                                        // Clear localStorage
+                                        localStorage.removeItem('auth_token');
+                                        localStorage.removeItem('admin_token');
+
+                                        // Clear all cookies
+                                        document.cookie.split(';').forEach((c) => {
+                                            document.cookie = c
+                                                .replace(/^ +/, '')
+                                                .replace(/=.*/, `=;expires=${new Date(0).toUTCString()};path=/`);
+                                        });
+                                    } catch (_) {}
+
+                                    // Redirect to home (strip query params)
+                                    const url = new URL(window.location.href);
+                                    window.location.href = `${url.origin}/`;
                                 }}
                                 className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm font-medium"
                             >

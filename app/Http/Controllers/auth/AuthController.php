@@ -136,10 +136,20 @@ class AuthController extends Controller
     {
         try {
             $user = $request->user();
-            $userToken = UserToken::where('user_id', $user->id)->first();
-            if ($userToken) {
-                $userToken->delete();
+
+            // Delete any stored access tokens
+            if ($user) {
+                $userToken = UserToken::where('user_id', $user->id)->first();
+                if ($userToken) {
+                    $userToken->delete();
+                }
             }
+
+            // Fully logout and destroy session
+            \Illuminate\Support\Facades\Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
             return $this->sendJsonResponse(true, 'Logged out successfully', null, 200);
         } catch (Exception $e) {
             return $this->sendError($e);

@@ -46,7 +46,7 @@ export default function ProductDetail() {
             <>
                 <Head title="Loading..." />
                 {user ? (
-                    <UserLayout user={user}>
+                    <UserLayout>
                         {loadingContent}
                     </UserLayout>
                 ) : (
@@ -77,7 +77,7 @@ export default function ProductDetail() {
             <>
                 <Head title="Product Not Found" />
                 {user ? (
-                    <UserLayout user={user}>
+                    <UserLayout>
                         {notFoundContent}
                     </UserLayout>
                 ) : (
@@ -155,7 +155,7 @@ export default function ProductDetail() {
         <>
             <Head title={product.name} />
             {user ? (
-                <UserLayout user={user}>
+                <UserLayout>
                     {productContent}
                 </UserLayout>
             ) : (

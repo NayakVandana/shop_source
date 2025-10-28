@@ -35,8 +35,8 @@ export default function Register() {
                 if (data.data && data.data.access_token) {
                     localStorage.setItem('auth_token', data.data.access_token);
                 }
-                // Redirect to dashboard
-                window.location.href = '/dashboard';
+                // Redirect to products page by default
+                window.location.href = '/products';
             } else {
                 // Show error messages
                 setError(data.message || 'Registration failed');

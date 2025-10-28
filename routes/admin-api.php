@@ -4,7 +4,6 @@ use App\Http\Controllers\admin\AuthController;
 use App\Http\Controllers\admin\DashboardController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('api/admin')->group(function () {
     
     // Admin Authentication
     Route::post('/login', [AuthController::class, 'adminLogin']);
@@ -20,4 +19,4 @@ Route::prefix('api/admin')->group(function () {
         Route::post('/dashboard/stats', [DashboardController::class, 'stats']);
         
     });
-});
+

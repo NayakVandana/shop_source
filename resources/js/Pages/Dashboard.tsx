@@ -6,9 +6,13 @@ import UserLayout from '../Layouts/UserLayout';
 export default function Dashboard({ stats, recent_products, top_categories }) {
     const { auth } = usePage().props;
     const user = auth.user;
+    // Provide safe defaults so the page doesn't crash when props are missing
+    const safeStats = stats || {};
+    const safeRecentProducts = Array.isArray(recent_products) ? recent_products : [];
+    const safeTopCategories = Array.isArray(top_categories) ? top_categories : [];
 
     return (
-        <UserLayout user={user}>
+        <UserLayout>
             <Head title="Dashboard" />
             <div className="min-h-screen bg-gray-50">
                 <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
@@ -20,23 +24,23 @@ export default function Dashboard({ stats, recent_products, top_categories }) {
                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 mb-12">
                         <div className="bg-white rounded-lg shadow p-6">
                             <h3 className="text-sm font-medium text-gray-500">Total Products</h3>
-                            <p className="mt-2 text-3xl font-semibold text-gray-900">{stats.total_products}</p>
+                            <p className="mt-2 text-3xl font-semibold text-gray-900">{safeStats.total_products ?? 0}</p>
                         </div>
                         <div className="bg-white rounded-lg shadow p-6">
                             <h3 className="text-sm font-medium text-gray-500">Total Categories</h3>
-                            <p className="mt-2 text-3xl font-semibold text-gray-900">{stats.total_categories}</p>
+                            <p className="mt-2 text-3xl font-semibold text-gray-900">{safeStats.total_categories ?? 0}</p>
                         </div>
                         <div className="bg-white rounded-lg shadow p-6">
                             <h3 className="text-sm font-medium text-gray-500">Total Users</h3>
-                            <p className="mt-2 text-3xl font-semibold text-gray-900">{stats.total_users}</p>
+                            <p className="mt-2 text-3xl font-semibold text-gray-900">{safeStats.total_users ?? 0}</p>
                         </div>
                         <div className="bg-white rounded-lg shadow p-6">
                             <h3 className="text-sm font-medium text-gray-500">Featured Products</h3>
-                            <p className="mt-2 text-3xl font-semibold text-gray-900">{stats.featured_products}</p>
+                            <p className="mt-2 text-3xl font-semibold text-gray-900">{safeStats.featured_products ?? 0}</p>
                         </div>
                         <div className="bg-white rounded-lg shadow p-6">
                             <h3 className="text-sm font-medium text-gray-500">Low Stock Products</h3>
-                            <p className="mt-2 text-3xl font-semibold text-red-600">{stats.low_stock_products}</p>
+                            <p className="mt-2 text-3xl font-semibold text-red-600">{safeStats.low_stock_products ?? 0}</p>
                         </div>
                     </div>
 
@@ -47,7 +51,7 @@ export default function Dashboard({ stats, recent_products, top_categories }) {
                         </div>
                         <div className="p-6">
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                                {recent_products.map((product) => (
+                                {safeRecentProducts.map((product) => (
                                     <div key={product.uuid} className="border rounded-lg p-4">
                                         <h3 className="font-medium text-gray-900">{product.name}</h3>
                                         <p className="text-sm text-gray-500 mt-1 line-clamp-2">{product.description}</p>
@@ -55,7 +59,7 @@ export default function Dashboard({ stats, recent_products, top_categories }) {
                                     </div>
                                 ))}
                             </div>
-                            {recent_products.length === 0 && (
+                            {safeRecentProducts.length === 0 && (
                                 <p className="text-center text-gray-500 py-4">No recent products</p>
                             )}
                         </div>
@@ -68,7 +72,7 @@ export default function Dashboard({ stats, recent_products, top_categories }) {
                         </div>
                         <div className="p-6">
                             <div className="space-y-4">
-                                {top_categories.map((category) => (
+                                {safeTopCategories.map((category) => (
                                     <div key={category.uuid} className="flex items-center justify-between border-b pb-4 last:border-b-0">
                                         <div>
                                             <h3 className="font-medium text-gray-900">{category.name}</h3>
@@ -77,7 +81,7 @@ export default function Dashboard({ stats, recent_products, top_categories }) {
                                     </div>
                                 ))}
                             </div>
-                            {top_categories.length === 0 && (
+                            {safeTopCategories.length === 0 && (
                                 <p className="text-center text-gray-500 py-4">No categories available</p>
                             )}
                         </div>

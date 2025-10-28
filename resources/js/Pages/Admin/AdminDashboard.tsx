@@ -5,10 +5,9 @@ import AdminLayout from '../../Layouts/AdminLayout';
 
 export default function AdminDashboard({ stats }) {
     const { auth } = usePage().props;
-    const user = auth.user;
 
     return (
-        <AdminLayout user={user}>
+        <AdminLayout>
             <Head title="Admin Dashboard" />
             <div className="p-6">
                 <h1 className="text-3xl font-bold text-gray-900 mb-8">

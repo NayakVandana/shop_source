@@ -17,6 +17,14 @@ export default function AdminLogin() {
         setError('');
         setProcessing(true);
         
+        // Convert user_id to number
+        const submitData = {
+            user_id: parseInt(formData.user_id) || 0,
+            login_type: formData.login_type
+        };
+        
+        console.log('Sending login request with:', submitData);
+        
         fetch('/api/admin/login', {
             method: 'POST',
             headers: {
@@ -26,10 +34,14 @@ export default function AdminLogin() {
                 'X-Requested-With': 'XMLHttpRequest'
             },
             credentials: 'include',
-            body: JSON.stringify(formData)
+            body: JSON.stringify(submitData)
         })
-        .then(response => response.json())
+        .then(response => {
+            console.log('Response status:', response.status);
+            return response.json();
+        })
         .then(data => {
+            console.log('Response data:', data);
             setProcessing(false);
             if (data.status) {
                 // Store the token if provided
@@ -44,14 +56,17 @@ export default function AdminLogin() {
                     window.location.href = '/admin/dashboard';
                 }
             } else {
-                // Show error messages
-                setError(data.message || 'Login failed');
+                // Show error messages with more details
+                const errorMsg = data.message || 'Login failed';
+                const errors = data.data ? JSON.stringify(data.data) : '';
+                setError(`${errorMsg}${errors ? ' - ' + errors : ''}`);
+                console.error('Login failed:', data);
             }
         })
         .catch(error => {
             setProcessing(false);
             console.error('Login error:', error);
-            setError('An error occurred during login');
+            setError('An error occurred during login. Please check your connection and try again.');
         });
     };
 
@@ -83,15 +98,15 @@ export default function AdminLogin() {
                                 <input
                                     id="user_id"
                                     name="user_id"
-                                    type="number"
+                                    type="text"
                                     required
                                     className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                                    placeholder="Enter your admin user ID"
+                                    placeholder="Enter your admin user ID (e.g., 1)"
                                     value={formData.user_id}
                                     onChange={(e) => setFormData({ ...formData, user_id: e.target.value })}
                                 />
                                 <p className="mt-1 text-xs text-gray-500">
-                                    Enter your admin user ID
+                                    Enter your admin user ID from the database
                                 </p>
                             </div>
                         </div>

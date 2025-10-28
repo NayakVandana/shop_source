@@ -7,6 +7,7 @@ import GuestLayout from '../Layouts/GuestLayout';
 export default function Products({ products }) {
     const { auth } = usePage().props;
     const user = auth.user;
+    const safeProducts = Array.isArray(products) ? products : [];
     
     const content = (
         <div className="min-h-screen bg-gray-50">
@@ -21,7 +22,7 @@ export default function Products({ products }) {
                     </div>
 
                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                        {products.map((product) => (
+                        {safeProducts.map((product) => (
                             <div key={product.uuid} className="bg-white rounded-lg shadow-md overflow-hidden">
                                 <div className="aspect-w-16 aspect-h-9 bg-gray-200">
                                     {product.image ? (
@@ -59,7 +60,7 @@ export default function Products({ products }) {
                         ))}
                     </div>
 
-                    {products.length === 0 && (
+                    {safeProducts.length === 0 && (
                         <div className="text-center py-12">
                             <p className="text-gray-500 text-lg">No products available at the moment.</p>
                         </div>
@@ -72,11 +73,11 @@ export default function Products({ products }) {
         <>
             <Head title="Products" />
             {user ? (
-                <UserLayout user={user}>
+                <UserLayout>
                     {content}
                 </UserLayout>
             ) : (
-                <GuestLayout user={user}>
+                <GuestLayout>
                     {content}
                 </GuestLayout>
             )}
