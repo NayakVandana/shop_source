@@ -3,21 +3,65 @@ import React, { useEffect } from 'react';
 import { Link } from '@inertiajs/react';
 
 export default function Navigation({ user }) {
-    // Only show admin features if user is authenticated AND is admin
+    // Only allow admin view for admins
     const isAdmin = user && user.name && (user.is_admin === true || user.role === 'admin');
-    
-    // Clear admin token if user is not an admin
+
     useEffect(() => {
         if (!isAdmin) {
             localStorage.removeItem('admin_token');
         }
     }, [isAdmin]);
-    
-    // Get admin token from localStorage if available
+
+    // Always strip token from URL after initial render to avoid lingering re-auth
+    useEffect(() => {
+        try {
+            const url = new URL(window.location.href);
+            if (url.searchParams.has('token')) {
+                url.searchParams.delete('token');
+                window.history.replaceState({}, '', url.toString());
+            }
+        } catch (_) {}
+    }, []);
+
+    // Auto-logout admin when browsing non-admin (user/guest) pages
+    useEffect(() => {
+        try {
+            const isAdminPath = typeof window !== 'undefined' && window.location.pathname.startsWith('/admin');
+            if (isAdminPath) return;
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const qpToken = urlParams.get('token');
+            const adminToken = localStorage.getItem('admin_token') || qpToken || '';
+
+            if (adminToken) {
+                fetch('/api/admin/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'AdminToken': adminToken,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    credentials: 'include'
+                }).catch(() => {});
+
+                // Clear stored/admin URL token
+                localStorage.removeItem('admin_token');
+
+                // Remove token from URL without reload
+                try {
+                    const url = new URL(window.location.href);
+                    url.searchParams.delete('token');
+                    window.history.replaceState({}, '', url.toString());
+                } catch (_) {}
+            }
+        } catch (_) {}
+    }, []);
+
+    // Optionally pass admin token in query if needed
     const adminToken = isAdmin ? localStorage.getItem('admin_token') : null;
     const adminPanelUrl = adminToken ? `/admin/dashboard?token=${adminToken}` : '/admin/dashboard';
-    
-    // Call API logout and then clear tokens/cookies and redirect
+
+    // Logout handler
     const handleLogout = async () => {
         try {
             const urlParams = new URLSearchParams(window.location.search);
@@ -31,19 +75,34 @@ export default function Navigation({ user }) {
                     headers: {
                         'Accept': 'application/json',
                         'Authorization': `Bearer ${token}`,
-                        'X-Requested-With': 'XMLHttpRequest'
+                        'X-Requested-With': 'XMLHttpRequest',
                     },
-                    credentials: 'include'
+                    credentials: 'include',
                 }).catch(() => {});
             }
+
+            // Also try admin logout if an admin token is present
+            try {
+                const adminLocal = localStorage.getItem('admin_token') || '';
+                const adminToken = qpToken || adminLocal || '';
+                if (adminToken) {
+                    await fetch('/api/admin/logout', {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'AdminToken': adminToken,
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        credentials: 'include',
+                    }).catch(() => {});
+                }
+            } catch (_) {}
         } catch (_) {}
 
+        // Clear local/session data
         try {
-            // Clear localStorage
             localStorage.removeItem('auth_token');
             localStorage.removeItem('admin_token');
-
-            // Clear cookies
             document.cookie.split(';').forEach((c) => {
                 document.cookie = c
                     .replace(/^ +/, '')
@@ -51,9 +110,8 @@ export default function Navigation({ user }) {
             });
         } catch (_) {}
 
-        // Redirect to home (strip query params)
-        const url = new URL(window.location.href);
-        window.location.href = `${url.origin}/`;
+        // Refresh to get latest backend state and props
+        window.location.replace("/");
     };
 
     return (
@@ -65,9 +123,7 @@ export default function Navigation({ user }) {
                             ShopSource
                         </Link>
                     </div>
-                    
                     <div className="flex items-center space-x-4">
-                        {/* Common links for all users */}
                         <Link
                             href="/"
                             className="text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium"
@@ -80,11 +136,8 @@ export default function Navigation({ user }) {
                         >
                             Products
                         </Link>
-                        
-                        {/* User-specific actions */}
                         {user && user.name ? (
                             <div className="flex items-center space-x-4">
-                                {/* Show Admin Panel link only for admins */}
                                 {isAdmin && (
                                     <Link
                                         href={adminPanelUrl}
@@ -93,8 +146,6 @@ export default function Navigation({ user }) {
                                         Admin Panel
                                     </Link>
                                 )}
-                                
-                                {/* User profile */}
                                 <div className="flex items-center">
                                     <div className="h-8 w-8 bg-indigo-600 rounded-full flex items-center justify-center">
                                         <span className="text-white text-sm font-medium">
@@ -105,8 +156,6 @@ export default function Navigation({ user }) {
                                         {user.name}
                                     </span>
                                 </div>
-                                
-                                {/* Logout button */}
                                 <button
                                     onClick={handleLogout}
                                     className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm font-medium"
@@ -115,7 +164,6 @@ export default function Navigation({ user }) {
                                 </button>
                             </div>
                         ) : (
-                            /* Guest user actions */
                             <div className="flex items-center space-x-2">
                                 <Link
                                     href="/login"

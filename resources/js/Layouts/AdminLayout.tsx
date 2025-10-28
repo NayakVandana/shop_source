@@ -89,12 +89,43 @@ export default function AdminLayout({ children }) {
                         >
                             Orders
                         </Link>
-                        <Link
-                            href="/"
-                            className="block px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors"
+                        <button
+                            onClick={async () => {
+                                try {
+                                    const urlParams = new URLSearchParams(window.location.search);
+                                    const qpToken = urlParams.get('token');
+                                    const adminToken = localStorage.getItem('admin_token') || '';
+                                    const token = qpToken || adminToken || '';
+
+                                    if (token) {
+                                        await fetch('/api/admin/logout', {
+                                            method: 'POST',
+                                            headers: {
+                                                'Accept': 'application/json',
+                                                'AdminToken': token,
+                                                'X-Requested-With': 'XMLHttpRequest'
+                                            },
+                                            credentials: 'include'
+                                        }).catch(() => {});
+                                    }
+                                } catch (_) {}
+
+                                try {
+                                    localStorage.removeItem('admin_token');
+                                    document.cookie.split(';').forEach((c) => {
+                                        document.cookie = c
+                                            .replace(/^ +/, '')
+                                            .replace(/=.*/, `=;expires=${new Date(0).toUTCString()};path=/`);
+                                    });
+                                } catch (_) {}
+
+                                const url = new URL(window.location.href);
+                                window.location.href = `${url.origin}/`;
+                            }}
+                            className="block w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors"
                         >
                             View Site
-                        </Link>
+                        </button>
                     </nav>
 
                     {/* User Info */}
@@ -165,11 +196,7 @@ export default function AdminLayout({ children }) {
                                     } catch (_) {}
 
                                     try {
-                                        // Clear localStorage
-                                        localStorage.removeItem('auth_token');
                                         localStorage.removeItem('admin_token');
-
-                                        // Clear all cookies
                                         document.cookie.split(';').forEach((c) => {
                                             document.cookie = c
                                                 .replace(/^ +/, '')
@@ -177,13 +204,12 @@ export default function AdminLayout({ children }) {
                                         });
                                     } catch (_) {}
 
-                                    // Redirect to home (strip query params)
                                     const url = new URL(window.location.href);
                                     window.location.href = `${url.origin}/`;
                                 }}
-                                className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm font-medium"
+                                className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 text-sm font-medium"
                             >
-                                Logout
+                                User Panel
                             </button>
                         </div>
                     </div>

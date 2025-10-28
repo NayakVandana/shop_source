@@ -58,10 +58,17 @@ class AuthController extends Controller
 
             // Logout admin guard as well
             \Illuminate\Support\Facades\Auth::guard('admin')->logout();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
+            // In API context the session may not be started; still attempt invalidation
+            try { $request->session()->invalidate(); } catch (\Throwable $e) {}
+            try { $request->session()->regenerateToken(); } catch (\Throwable $e) {}
 
-            return $this->sendJsonResponse(true, 'Admin logged out successfully', null, 200);
+            // Also explicitly forget possible cookies used by our app and the session cookie
+            $response = $this->sendJsonResponse(true, 'Admin logged out successfully', null, 200);
+            $response->headers->clearCookie(config('session.cookie'));
+            $response->headers->clearCookie('auth_token');
+            $response->headers->clearCookie('admin_token');
+
+            return $response;
         } catch (Exception $e) {
             return $this->sendError($e);
         }
