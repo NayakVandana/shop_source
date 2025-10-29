@@ -45,3 +45,16 @@ Route::get('/admin/login', function () {
 Route::get('/admin/dashboard', function () {
     return Inertia::render('admin/dashboard/AdminDashboard');
 })->name('admin.dashboard');
+
+// Admin Products (Protected)
+Route::get('/admin/products', function () {
+    return Inertia::render('admin/products/Products');
+})->name('admin.products');
+
+Route::get('/admin/products/create', function () {
+    return Inertia::render('admin/products/ProductForm');
+})->name('admin.products.create');
+
+Route::get('/admin/products/edit', function () {
+    return Inertia::render('admin/products/ProductForm');
+})->name('admin.products.edit');
