@@ -40,16 +40,16 @@ export default function AdminLayout({ children }) {
     return (
         <div className="min-h-screen bg-gray-50 flex">
             {/* Sidebar */}
-            <aside className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-50 w-64 bg-gray-900 transition-transform duration-300`}>
+            <aside className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-50 w-64 sm:w-72 bg-gray-900 transition-transform duration-300`}>
                 <div className="h-full flex flex-col">
                     {/* Logo */}
-                    <div className="flex items-center justify-between h-16 px-6 border-b border-gray-800">
-                        <Link href={`/admin/dashboard${tokenParam}`} className="text-xl font-bold text-white">
+                    <div className="flex items-center justify-between h-14 sm:h-16 px-4 sm:px-6 border-b border-gray-800">
+                        <Link href={`/admin/dashboard${tokenParam}`} className="text-lg sm:text-xl font-bold text-white">
                             ShopSource
                         </Link>
                         <button
                             onClick={() => setSidebarOpen(false)}
-                            className="lg:hidden text-gray-400 hover:text-white"
+                            className="lg:hidden text-gray-400 hover:text-white touch-manipulation p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
                         >
                             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -58,34 +58,39 @@ export default function AdminLayout({ children }) {
                     </div>
 
                     {/* Navigation */}
-                    <nav className="flex-1 px-4 py-6 space-y-2">
+                    <nav className="flex-1 px-3 sm:px-4 py-4 sm:py-6 space-y-1 sm:space-y-2 overflow-y-auto">
                         <Link
                             href={`/admin/dashboard${tokenParam}`}
-                            className="block px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors"
+                            className="block px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors touch-manipulation min-h-[44px] flex items-center"
+                            onClick={() => setSidebarOpen(false)}
                         >
                             Dashboard
                         </Link>
                         <Link
                             href={`/admin/products${tokenParam}`}
-                            className="block px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors"
+                            className="block px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors touch-manipulation min-h-[44px] flex items-center"
+                            onClick={() => setSidebarOpen(false)}
                         >
                             Products
                         </Link>
                         <Link
                             href={`/admin/categories${tokenParam}`}
-                            className="block px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors"
+                            className="block px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors touch-manipulation min-h-[44px] flex items-center"
+                            onClick={() => setSidebarOpen(false)}
                         >
                             Categories
                         </Link>
                         <Link
                             href={`/admin/users${tokenParam}`}
-                            className="block px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors"
+                            className="block px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors touch-manipulation min-h-[44px] flex items-center"
+                            onClick={() => setSidebarOpen(false)}
                         >
                             Users
                         </Link>
                         <Link
                             href={`/admin/orders${tokenParam}`}
-                            className="block px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors"
+                            className="block px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors touch-manipulation min-h-[44px] flex items-center"
+                            onClick={() => setSidebarOpen(false)}
                         >
                             Orders
                         </Link>
@@ -121,8 +126,9 @@ export default function AdminLayout({ children }) {
 
                                 const url = new URL(window.location.href);
                                 window.location.href = `${url.origin}/`;
+                                setSidebarOpen(false);
                             }}
-                            className="block w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors"
+                            className="block w-full text-left px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors touch-manipulation min-h-[44px]"
                         >
                             View Site
                         </button>
@@ -130,27 +136,27 @@ export default function AdminLayout({ children }) {
 
                     {/* User Info */}
                     {user && user.name ? (
-                        <div className="border-t border-gray-800 px-4 py-4">
+                        <div className="border-t border-gray-800 px-3 sm:px-4 py-3 sm:py-4">
                             <div className="flex items-center">
-                                <div className="h-10 w-10 bg-indigo-600 rounded-full flex items-center justify-center">
-                                    <span className="text-white text-sm font-medium">
+                                <div className="h-9 w-9 sm:h-10 sm:w-10 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <span className="text-white text-xs sm:text-sm font-medium">
                                         {user.name.charAt(0).toUpperCase()}
                                     </span>
                                 </div>
-                                <div className="ml-3">
-                                    <p className="text-sm font-medium text-white">{user.name}</p>
+                                <div className="ml-2 sm:ml-3 min-w-0">
+                                    <p className="text-xs sm:text-sm font-medium text-white truncate">{user.name}</p>
                                     <p className="text-xs text-gray-400">Administrator</p>
                                 </div>
                             </div>
                         </div>
                     ) : (
-                        <div className="border-t border-gray-800 px-4 py-4">
+                        <div className="border-t border-gray-800 px-3 sm:px-4 py-3 sm:py-4">
                             <div className="flex items-center">
-                                <div className="h-10 w-10 bg-gray-700 rounded-full flex items-center justify-center">
-                                    <span className="text-gray-300 text-sm font-medium">...</span>
+                                <div className="h-9 w-9 sm:h-10 sm:w-10 bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <span className="text-gray-300 text-xs sm:text-sm font-medium">...</span>
                                 </div>
-                                <div className="ml-3">
-                                    <p className="text-sm font-medium text-gray-300">Loading...</p>
+                                <div className="ml-2 sm:ml-3">
+                                    <p className="text-xs sm:text-sm font-medium text-gray-300">Loading...</p>
                                     <p className="text-xs text-gray-500">Admin</p>
                                 </div>
                             </div>
@@ -163,17 +169,17 @@ export default function AdminLayout({ children }) {
             <div className="flex-1 flex flex-col">
                 {/* Top Navigation */}
                 <header className="bg-white shadow-sm border-b border-gray-200">
-                    <div className="flex items-center justify-between h-16 px-6">
+                    <div className="flex items-center justify-between h-14 sm:h-16 px-4 sm:px-6">
                         <button
                             onClick={() => setSidebarOpen(true)}
-                            className="lg:hidden text-gray-600 hover:text-gray-900"
+                            className="lg:hidden text-gray-600 hover:text-gray-900 touch-manipulation p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
                         >
                             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                             </svg>
                         </button>
 
-                        <div className="flex items-center space-x-4 ml-auto">
+                        <div className="flex items-center space-x-2 sm:space-x-4 ml-auto">
                             <button
                                 onClick={async () => {
                                     try {
@@ -207,7 +213,7 @@ export default function AdminLayout({ children }) {
                                     const url = new URL(window.location.href);
                                     window.location.href = `${url.origin}/`;
                                 }}
-                                className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 text-sm font-medium"
+                                className="bg-indigo-600 text-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-md hover:bg-indigo-700 active:bg-indigo-800 text-xs sm:text-sm font-medium transition-colors touch-manipulation min-h-[36px] sm:min-h-[40px]"
                             >
                                 User Panel
                             </button>

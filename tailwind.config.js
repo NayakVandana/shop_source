@@ -8,7 +8,20 @@ export default {
     "./resources/**/*.tsx",
   ],
   theme: {
-    extend: {},
+    extend: {
+      touchAction: {
+        manipulation: 'manipulation',
+      },
+    },
   },
-  plugins: [],
+  plugins: [
+    function({ addUtilities }) {
+      addUtilities({
+        '.touch-manipulation': {
+          'touch-action': 'manipulation',
+          '-webkit-tap-highlight-color': 'transparent',
+        },
+      })
+    },
+  ],
 }

@@ -8,9 +8,9 @@ type CardProps = React.HTMLAttributes<HTMLDivElement> & {
 
 const paddingClasses = {
   none: 'p-0',
-  sm: 'p-4',
-  md: 'p-6',
-  lg: 'p-8',
+  sm: 'p-3 sm:p-4',
+  md: 'p-4 sm:p-5 md:p-6',
+  lg: 'p-6 sm:p-7 md:p-8',
 };
 
 export default function Card({ padding = 'md', className = '', ...props }: CardProps) {

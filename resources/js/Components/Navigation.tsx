@@ -148,10 +148,10 @@ export default function Navigation({ user }) {
 
 	return (
 		<nav className="bg-white shadow-lg sticky top-0 z-50" style={{ borderBottomColor: colors.surface.border }}>
-			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-				<div className="flex justify-between h-16">
+			<div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
+				<div className="flex justify-between h-14 sm:h-16">
 					<div className="flex items-center">
-						<Link href="/" className="text-xl font-bold text-indigo-600">
+						<Link href="/" className="text-lg sm:text-xl font-bold text-indigo-600 touch-manipulation">
 							ShopSource
 						</Link>
 					</div>
@@ -220,7 +220,7 @@ export default function Navigation({ user }) {
 						<button
 							ref={menuButtonRef}
 							type="button"
-							className="inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-indigo-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+							className="inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-indigo-600 hover:bg-gray-100 active:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 touch-manipulation min-w-[44px] min-h-[44px]"
 							aria-controls="mobile-menu"
 							aria-expanded={isMobileOpen}
 							onClick={() => setIsMobileOpen((v) => !v)}
@@ -244,17 +244,17 @@ export default function Navigation({ user }) {
 
 			{/* Mobile menu panel */}
 			<div id="mobile-menu" className={`${isMobileOpen ? 'block' : 'hidden'} lg:hidden`}>
-				<div ref={mobileMenuRef} className="space-y-1 px-4 pt-2 pb-4 border-t border-gray-200 bg-white shadow-lg">
+				<div ref={mobileMenuRef} className="space-y-1 px-3 sm:px-4 pt-2 pb-4 border-t border-gray-200 bg-white shadow-lg">
 					<Link
 						href="/"
-						className="block text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-base font-medium"
+						className="block text-gray-700 hover:text-indigo-600 hover:bg-gray-50 active:bg-gray-100 px-3 py-3 rounded-md text-base font-medium touch-manipulation min-h-[44px] flex items-center"
 						onClick={() => setIsMobileOpen(false)}
 					>
 						Home
 					</Link>
 					<Link
 						href="/products"
-						className="block text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-base font-medium"
+						className="block text-gray-700 hover:text-indigo-600 hover:bg-gray-50 active:bg-gray-100 px-3 py-3 rounded-md text-base font-medium touch-manipulation min-h-[44px] flex items-center"
 						onClick={() => setIsMobileOpen(false)}
 					>
 						Products
@@ -265,26 +265,26 @@ export default function Navigation({ user }) {
 							{isAdmin && (
 								<Link
 									href={adminPanelUrl}
-									className="block text-indigo-600 hover:text-indigo-700 px-3 py-2 rounded-md text-base font-medium border border-indigo-600"
+									className="block text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 active:bg-indigo-100 px-3 py-3 rounded-md text-base font-medium border border-indigo-600 touch-manipulation min-h-[44px] flex items-center mb-2"
 									onClick={() => setIsMobileOpen(false)}
 								>
 									Admin Panel
 								</Link>
 							)}
 							<div className="flex items-center px-3 py-3">
-								<div className="h-9 w-9 bg-indigo-600 rounded-full flex items-center justify-center">
+								<div className="h-9 w-9 sm:h-10 sm:w-10 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
 									<span className="text-white text-sm font-medium">
 										{user.name.charAt(0).toUpperCase()}
 									</span>
 								</div>
-								<span className="ml-3 text-gray-700 text-base font-medium">
+								<span className="ml-3 text-gray-700 text-base font-medium truncate">
 									{user.name}
 								</span>
 							</div>
-							<div className="px-3">
+							<div className="px-3 pb-2">
 								<button
 									onClick={() => { setIsMobileOpen(false); handleLogout(); }}
-									className="w-full bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-base font-medium"
+									className="w-full bg-red-600 text-white px-4 py-3 rounded-md hover:bg-red-700 active:bg-red-800 text-base font-medium transition-colors touch-manipulation min-h-[44px]"
 								>
 									Logout
 								</button>
@@ -294,14 +294,14 @@ export default function Navigation({ user }) {
 						<div className="pt-2 border-t border-gray-200 space-y-2">
 							<Link
 								href="/login"
-								className="block text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-base font-medium"
+								className="block text-gray-700 hover:text-indigo-600 hover:bg-gray-50 active:bg-gray-100 px-3 py-3 rounded-md text-base font-medium touch-manipulation min-h-[44px] flex items-center"
 								onClick={() => setIsMobileOpen(false)}
 							>
 								Login
 							</Link>
 							<Link
 								href="/register"
-								className="block bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 text-base font-medium text-center"
+								className="block bg-indigo-600 text-white px-4 py-3 rounded-md hover:bg-indigo-700 active:bg-indigo-800 text-base font-medium text-center transition-colors touch-manipulation min-h-[44px] flex items-center justify-center"
 								onClick={() => setIsMobileOpen(false)}
 							>
 								Register

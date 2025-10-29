@@ -9,9 +9,9 @@ type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 const sizeClasses = {
-  sm: 'px-3 py-2 text-sm',
-  md: 'px-4 py-2 text-sm',
-  lg: 'px-5 py-3 text-base',
+  sm: 'px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm min-h-[36px] sm:min-h-[40px]',
+  md: 'px-4 sm:px-5 py-2.5 sm:py-3 text-sm sm:text-base min-h-[44px]',
+  lg: 'px-5 sm:px-6 py-3 sm:py-4 text-base sm:text-lg min-h-[48px] sm:min-h-[52px]',
 };
 
 export default function Button({
@@ -31,7 +31,7 @@ export default function Button({
 
   return (
     <button
-      className={`rounded-md font-medium transition-colors ${variants[variant]} ${sizeClasses[size]} ${blockClass} ${className}`}
+      className={`rounded-md font-medium transition-colors touch-manipulation ${variants[variant]} ${sizeClasses[size]} ${blockClass} ${className}`}
       style={{ borderRadius: radii.md }}
       {...props}
     />

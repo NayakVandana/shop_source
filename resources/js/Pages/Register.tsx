@@ -52,32 +52,32 @@ export default function Register() {
     return (
         <GuestLayout>
             <Head title="Register" />
-            <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-                <div className="max-w-md w-full space-y-8">
+            <div className="flex items-center justify-center py-8 px-4 sm:py-12 sm:px-6 lg:px-8 min-h-[calc(100vh-200px)]">
+                <div className="max-w-md w-full space-y-6 sm:space-y-8">
                     <div>
-                        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                        <h2 className="mt-4 sm:mt-6 text-center text-2xl sm:text-3xl font-extrabold text-gray-900">
                             Create your account
                         </h2>
-                        <p className="mt-2 text-center text-sm text-gray-600">
+                        <p className="mt-2 text-center text-xs sm:text-sm text-gray-600">
                             Or{' '}
                             <Link
                                 href="/login"
-                                className="font-medium text-indigo-600 hover:text-indigo-500"
+                                className="font-medium text-indigo-600 hover:text-indigo-500 touch-manipulation"
                             >
                                 sign in to your existing account
                             </Link>
                         </p>
                     </div>
-                    <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+                    <form className="mt-6 sm:mt-8 space-y-5 sm:space-y-6" onSubmit={handleSubmit}>
                         {error && (
-                            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md">
+                            <div className="bg-red-50 border border-red-200 text-red-600 px-3 sm:px-4 py-2.5 sm:py-3 rounded-md text-sm sm:text-base">
                                 {error}
                             </div>
                         )}
                         
-                        <div className="space-y-4">
+                        <div className="space-y-4 sm:space-y-5">
                             <div>
-                                <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                                <label htmlFor="name" className="block text-sm sm:text-base font-medium text-gray-700 mb-1.5">
                                     Full Name
                                 </label>
                                 <input
@@ -85,7 +85,7 @@ export default function Register() {
                                     name="name"
                                     type="text"
                                     required
-                                    className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                    className="appearance-none relative block w-full px-3 sm:px-4 py-3 sm:py-3.5 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base sm:text-sm min-h-[44px]"
                                     placeholder="Enter your full name"
                                     value={formData.name}
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -93,7 +93,7 @@ export default function Register() {
                             </div>
                             
                             <div>
-                                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                                <label htmlFor="email" className="block text-sm sm:text-base font-medium text-gray-700 mb-1.5">
                                     Email Address
                                 </label>
                                 <input
@@ -102,7 +102,7 @@ export default function Register() {
                                     type="email"
                                     autoComplete="email"
                                     required
-                                    className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                    className="appearance-none relative block w-full px-3 sm:px-4 py-3 sm:py-3.5 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base sm:text-sm min-h-[44px]"
                                     placeholder="Enter your email"
                                     value={formData.email}
                                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -110,7 +110,7 @@ export default function Register() {
                             </div>
                             
                             <div>
-                                <label htmlFor="mobile" className="block text-sm font-medium text-gray-700">
+                                <label htmlFor="mobile" className="block text-sm sm:text-base font-medium text-gray-700 mb-1.5">
                                     Mobile Number
                                 </label>
                                 <input
@@ -118,7 +118,7 @@ export default function Register() {
                                     name="mobile"
                                     type="tel"
                                     required
-                                    className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                    className="appearance-none relative block w-full px-3 sm:px-4 py-3 sm:py-3.5 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base sm:text-sm min-h-[44px]"
                                     placeholder="Enter your mobile number"
                                     value={formData.mobile}
                                     onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
@@ -130,7 +130,7 @@ export default function Register() {
                             <button
                                 type="submit"
                                 disabled={processing}
-                                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="group relative w-full flex justify-center py-3 sm:py-3.5 px-4 border border-transparent text-base sm:text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors touch-manipulation min-h-[44px]"
                             >
                                 {processing ? 'Creating Account...' : 'Create Account'}
                             </button>
