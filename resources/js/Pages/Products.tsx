@@ -66,8 +66,8 @@ export default function Products() {
 
 						<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 md:gap-6 lg:grid-cols-3 xl:grid-cols-4">
 							{products.map((product) => (
-								<Card key={product.uuid || product.id} className="overflow-hidden transition-shadow hover:shadow-lg">
-									<div className="aspect-w-16 aspect-h-9 bg-gray-200">
+								<Card key={product.uuid || product.id} className="overflow-hidden transition-shadow hover:shadow-lg flex flex-col h-full">
+									<div className="aspect-w-16 aspect-h-9 bg-gray-200 flex-shrink-0">
 										{product.image ? (
 											<img 
 												src={product.image} 
@@ -81,12 +81,12 @@ export default function Products() {
 											</div>
 										)}
 									</div>
-									<div className="p-4 sm:p-5 md:p-6">
+									<div className="p-4 sm:p-5 md:p-6 flex flex-col flex-1">
 										<Heading level={3} className="mb-2 text-lg sm:text-xl md:text-2xl line-clamp-2">{product.name}</Heading>
-										<Text size="sm" className="mb-4 line-clamp-2 text-xs sm:text-sm">{product.description}</Text>
-										<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-2">
-											<span className="text-xl sm:text-2xl font-bold text-indigo-600">${product.price}</span>
-											<Link href={`/product?uuid=${product.uuid || product.id}`} className="block sm:inline-block">
+										<Text size="sm" className="mb-4 line-clamp-2 text-xs sm:text-sm flex-grow">{product.description}</Text>
+										<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mt-auto">
+											<span className="text-xl sm:text-2xl font-bold text-indigo-600 whitespace-nowrap">${product.price}</span>
+											<Link href={`/product?uuid=${product.uuid || product.id}`} className="flex-shrink-0">
 												<Button size="sm" className="w-full sm:w-auto touch-manipulation">View Details</Button>
 											</Link>
 										</div>
