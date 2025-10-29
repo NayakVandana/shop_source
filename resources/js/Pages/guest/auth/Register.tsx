@@ -1,16 +1,14 @@
 // @ts-nocheck
 import React, { useState } from 'react';
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { FormEvent } from 'react';
-import GuestLayout from '../Layouts/GuestLayout';
+import GuestLayout from '../../../Layouts/GuestLayout';
 
-export default function Login() {
-    const { auth } = usePage().props;
+export default function Register() {
     const [formData, setFormData] = useState({
+        name: '',
         email: '',
-        password: '',
-        login_with: 'PASSWORD',
-        login_type: 'web'
+        mobile: ''
     });
     const [error, setError] = useState('');
     const [processing, setProcessing] = useState(false);
@@ -20,16 +18,13 @@ export default function Login() {
         setError('');
         setProcessing(true);
         
-        // Use regular form submission since the API returns JSON
-        fetch('/api/user/login', {
+        fetch('/api/user/register', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                'X-Requested-With': 'XMLHttpRequest'
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
             },
-            credentials: 'include',
             body: JSON.stringify(formData)
         })
         .then(response => response.json())
@@ -40,41 +35,36 @@ export default function Login() {
                 if (data.data && data.data.access_token) {
                     localStorage.setItem('auth_token', data.data.access_token);
                 }
-                // Redirect to products page by default (include token if present)
-                const token = data.data?.access_token || '';
-                if (token) {
-                    window.location.href = `/products?token=${token}`;
-                } else {
-                    window.location.href = '/products';
-                }
+                // Redirect to products page by default
+                window.location.href = '/products';
             } else {
                 // Show error messages
-                setError(data.message || 'Login failed');
+                setError(data.message || 'Registration failed');
             }
         })
         .catch(error => {
             setProcessing(false);
-            console.error('Login error:', error);
-            setError('An error occurred during login');
+            console.error('Registration error:', error);
+            setError('An error occurred during registration');
         });
     };
 
     return (
         <GuestLayout>
-            <Head title="Login" />
+            <Head title="Register" />
             <div className="flex items-center justify-center py-8 px-4 sm:py-12 sm:px-6 lg:px-8 min-h-[calc(100vh-200px)]">
                 <div className="max-w-md w-full space-y-6 sm:space-y-8">
                     <div>
                         <h2 className="mt-4 sm:mt-6 text-center text-2xl sm:text-3xl font-extrabold text-gray-900">
-                            Sign in to your account
+                            Create your account
                         </h2>
                         <p className="mt-2 text-center text-xs sm:text-sm text-gray-600">
                             Or{' '}
                             <Link
-                                href="/register"
+                                href="/login"
                                 className="font-medium text-indigo-600 hover:text-indigo-500 touch-manipulation"
                             >
-                                create a new account
+                                sign in to your existing account
                             </Link>
                         </p>
                     </div>
@@ -86,6 +76,22 @@ export default function Login() {
                         )}
                         
                         <div className="space-y-4 sm:space-y-5">
+                            <div>
+                                <label htmlFor="name" className="block text-sm sm:text-base font-medium text-gray-700 mb-1.5">
+                                    Full Name
+                                </label>
+                                <input
+                                    id="name"
+                                    name="name"
+                                    type="text"
+                                    required
+                                    className="appearance-none relative block w-full px-3 sm:px-4 py-3 sm:py-3.5 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base sm:text-sm min-h-[44px]"
+                                    placeholder="Enter your full name"
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                />
+                            </div>
+                            
                             <div>
                                 <label htmlFor="email" className="block text-sm sm:text-base font-medium text-gray-700 mb-1.5">
                                     Email Address
@@ -104,19 +110,18 @@ export default function Login() {
                             </div>
                             
                             <div>
-                                <label htmlFor="password" className="block text-sm sm:text-base font-medium text-gray-700 mb-1.5">
-                                    Password
+                                <label htmlFor="mobile" className="block text-sm sm:text-base font-medium text-gray-700 mb-1.5">
+                                    Mobile Number
                                 </label>
                                 <input
-                                    id="password"
-                                    name="password"
-                                    type="password"
-                                    autoComplete="current-password"
+                                    id="mobile"
+                                    name="mobile"
+                                    type="tel"
                                     required
                                     className="appearance-none relative block w-full px-3 sm:px-4 py-3 sm:py-3.5 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base sm:text-sm min-h-[44px]"
-                                    placeholder="Enter your password"
-                                    value={formData.password}
-                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                    placeholder="Enter your mobile number"
+                                    value={formData.mobile}
+                                    onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
                                 />
                             </div>
                         </div>
@@ -127,7 +132,7 @@ export default function Login() {
                                 disabled={processing}
                                 className="group relative w-full flex justify-center py-3 sm:py-3.5 px-4 border border-transparent text-base sm:text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors touch-manipulation min-h-[44px]"
                             >
-                                {processing ? 'Signing In...' : 'Sign In'}
+                                {processing ? 'Creating Account...' : 'Create Account'}
                             </button>
                         </div>
                     </form>
@@ -136,3 +141,4 @@ export default function Login() {
         </GuestLayout>
     );
 }
+

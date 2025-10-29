@@ -2,8 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import axios from 'axios';
-import UserLayout from '../Layouts/UserLayout';
-import GuestLayout from '../Layouts/GuestLayout';
+import UserLayout from '../../../Layouts/UserLayout';
+import GuestLayout from '../../../Layouts/GuestLayout';
 
 export default function ProductDetail() {
     const { auth } = usePage().props;
@@ -166,3 +166,4 @@ export default function ProductDetail() {
         </>
     );
 }
+

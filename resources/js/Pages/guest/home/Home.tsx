@@ -1,8 +1,8 @@
 // @ts-nocheck
 import React from 'react';
 import { Head, usePage } from '@inertiajs/react';
-import GuestLayout from '../Layouts/GuestLayout';
-import UserLayout from '../Layouts/UserLayout';
+import GuestLayout from '../../../Layouts/GuestLayout';
+import UserLayout from '../../../Layouts/UserLayout';
 
 export default function Home() {
     const { auth } = usePage().props;
@@ -82,3 +82,4 @@ export default function Home() {
         </GuestLayout>
     );
 }
+

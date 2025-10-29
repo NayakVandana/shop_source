@@ -9,39 +9,39 @@ use Inertia\Inertia;
 // No business logic - views only
 // ============================================
 
-// Home & Public Pages
+// Home & Public Pages (Guest)
 Route::get('/', function () {
-    return Inertia::render('Home');
+    return Inertia::render('guest/home/Home');
 })->name('home');
 
 Route::get('/products', function () {
-    return Inertia::render('Products');
+    return Inertia::render('guest/product/Products');
 })->name('products');
 
 Route::get('/product', function () {
-    return Inertia::render('ProductDetail');
+    return Inertia::render('guest/product/ProductDetail');
 })->name('product');
 
-// Authentication Pages
+// Authentication Pages (Guest)
 Route::get('/login', function () {
-    return Inertia::render('Login');
+    return Inertia::render('guest/auth/Login');
 })->name('login');
 
 Route::get('/register', function () {
-    return Inertia::render('Register');
+    return Inertia::render('guest/auth/Register');
 })->name('register');
 
 // User Dashboard (Protected)
 Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
+    return Inertia::render('user/dashboard/Dashboard');
 })->name('dashboard');
 
-// Admin Authentication
+// Admin Authentication (Guest)
 Route::get('/admin/login', function () {
-    return Inertia::render('Admin/AdminLogin');
+    return Inertia::render('admin/auth/AdminLogin');
 })->name('admin.login');
 
 // Admin Dashboard (Protected)
 Route::get('/admin/dashboard', function () {
-    return Inertia::render('Admin/AdminDashboard');
+    return Inertia::render('admin/dashboard/AdminDashboard');
 })->name('admin.dashboard');

@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Head } from '@inertiajs/react';
 import axios from 'axios';
-import AdminLayout from '../../Layouts/AdminLayout';
+import AdminLayout from '../../../Layouts/AdminLayout';
 
 export default function AdminDashboard() {
     const [stats, setStats] = useState({});

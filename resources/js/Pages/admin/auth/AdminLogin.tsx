@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Head } from '@inertiajs/react';
 import { FormEvent } from 'react';
-import GuestLayout from '../../Layouts/GuestLayout';
+import GuestLayout from '../../../Layouts/GuestLayout';
 
 export default function AdminLogin() {
     const [formData, setFormData] = useState({

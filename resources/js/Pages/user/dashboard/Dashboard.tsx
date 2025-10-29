@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Head, usePage } from '@inertiajs/react';
 import axios from 'axios';
-import UserLayout from '../Layouts/UserLayout';
+import UserLayout from '../../../Layouts/UserLayout';
 
 export default function Dashboard() {
     const { auth } = usePage().props;

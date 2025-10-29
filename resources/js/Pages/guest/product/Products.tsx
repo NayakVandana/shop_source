@@ -2,11 +2,11 @@
 import React, { useEffect, useState } from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import axios from 'axios';
-import UserLayout from '../Layouts/UserLayout';
-import GuestLayout from '../Layouts/GuestLayout';
-import Card from '../Components/ui/Card';
-import Button from '../Components/ui/Button';
-import { Heading, Text } from '../Components/ui/Typography';
+import UserLayout from '../../../Layouts/UserLayout';
+import GuestLayout from '../../../Layouts/GuestLayout';
+import Card from '../../../Components/ui/Card';
+import Button from '../../../Components/ui/Button';
+import { Heading, Text } from '../../../Components/ui/Typography';
 
 export default function Products() {
 	const { auth } = usePage().props;
@@ -120,3 +120,4 @@ export default function Products() {
 		</>
 	);
 }
+
