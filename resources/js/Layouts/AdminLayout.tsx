@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, usePage } from '@inertiajs/react';
 
-export default function AdminLayout({ children }) {
+export default function AdminLayout({ children, is404 = false }) {
     const { auth } = usePage().props;
     const user = auth.user;
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -223,7 +223,22 @@ export default function AdminLayout({ children }) {
 
                 {/* Page Content */}
                 <main className="flex-1 overflow-auto">
-                    {children}
+                    {is404 ? (
+                        <div className="min-h-full flex items-center justify-center px-4 py-16">
+                            <div className="text-center">
+                                <div className="text-3xl font-bold text-gray-900 mb-2">404</div>
+                                <div className="text-lg text-gray-600 mb-6">Page not found</div>
+                                <a
+                                    href={`/admin/dashboard${tokenParam}`}
+                                    className="text-indigo-600 hover:text-indigo-500 font-medium"
+                                >
+                                    Back to Admin Dashboard
+                                </a>
+                            </div>
+                        </div>
+                    ) : (
+                        children
+                    )}
                 </main>
             </div>
 

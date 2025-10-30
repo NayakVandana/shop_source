@@ -58,3 +58,8 @@ Route::get('/admin/products/create', function () {
 Route::get('/admin/products/edit', function () {
     return Inertia::render('admin/products/ProductForm');
 })->name('admin.products.edit');
+
+// Fallback: render Inertia 404 page for any unknown web route
+Route::fallback(function () {
+    return Inertia::render('errors/PageNotFound')->toResponse(request())->setStatusCode(404);
+});

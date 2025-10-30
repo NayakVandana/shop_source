@@ -6,9 +6,10 @@ import Footer from '../Components/Footer';
 
 interface BaseLayoutProps {
     children: React.ReactNode;
+    is404?: boolean;
 }
 
-export default function BaseLayout({ children }: BaseLayoutProps) {
+export default function BaseLayout({ children, is404 = false }: BaseLayoutProps) {
     const { auth } = usePage().props;
     const user = auth.user;
 
@@ -19,7 +20,20 @@ export default function BaseLayout({ children }: BaseLayoutProps) {
 
             {/* Main Content */}
             <main className="flex-1">
-                {children}
+                {is404 ? (
+                    <div className="min-h-full flex items-center justify-center px-4 py-16">
+                        <div className="text-center">
+                            <div className="text-3xl font-bold text-gray-900 mb-2">404</div>
+                            <div className="text-lg text-gray-600 mb-6">Page not found</div>
+                            <div className="space-x-4">
+                                <a href="/" className="text-indigo-600 hover:text-indigo-500 font-medium">Go home</a>
+                                <a href="/products" className="text-gray-600 hover:text-gray-500 font-medium">Browse products</a>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    children
+                )}
             </main>
 
             {/* Footer */}

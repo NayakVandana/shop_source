@@ -2,7 +2,7 @@
 import React from 'react';
 import BaseLayout from './BaseLayout';
 
-export default function GuestLayout({ children }) {
-    return <BaseLayout>{children}</BaseLayout>;
+export default function GuestLayout({ children, is404 = false }) {
+    return <BaseLayout is404={is404}>{children}</BaseLayout>;
 }
 
