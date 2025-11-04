@@ -1,28 +1,36 @@
 // @ts-nocheck
 import React from 'react';
-import { typography, colors } from '../../theme/tokens';
+
+const headingClasses = {
+  '1': 'text-4xl font-bold text-text-primary',
+  '2': 'text-3xl font-bold text-text-primary',
+  '3': 'text-2xl font-bold text-text-primary',
+};
+
+const textClasses = {
+  sm: 'text-sm',
+  md: 'text-base',
+};
 
 export function Heading({ level = 1, children, className = '' }) {
-  const Tag = (`h${Math.min(Math.max(level, 1), 3)}` as unknown) as keyof JSX.IntrinsicElements;
-  const styles = level === 1 ? typography.heading.xl : level === 2 ? typography.heading.lg : typography.heading.md;
+  const Tag = `h${Math.min(Math.max(level, 1), 3)}`;
+  const headingClass = headingClasses[level] || headingClasses['1'];
 
-  return (
-    <Tag
-      className={`font-bold text-gray-900 ${className}`}
-      style={{ fontSize: styles.fontSize, lineHeight: `${styles.lineHeight}px`, fontWeight: styles.fontWeight, color: colors.text.primary }}
-    >
-      {children}
-    </Tag>
-  );
+  if (Tag === 'h1') {
+    return <h1 className={`${headingClass} ${className}`}>{children}</h1>;
+  }
+  if (Tag === 'h2') {
+    return <h2 className={`${headingClass} ${className}`}>{children}</h2>;
+  }
+  return <h3 className={`${headingClass} ${className}`}>{children}</h3>;
 }
 
 export function Text({ size = 'md', muted = false, className = '', children }) {
-  const styles = size === 'sm' ? typography.text.sm : typography.text.md;
+  const textClass = textClasses[size] || textClasses['md'];
+  const colorClass = muted ? 'text-text-muted' : 'text-text-primary';
+
   return (
-    <p
-      className={`${muted ? 'text-gray-500' : 'text-gray-700'} ${className}`}
-      style={{ fontSize: styles.fontSize, lineHeight: `${styles.lineHeight}px`, fontWeight: styles.fontWeight }}
-    >
+    <p className={`${textClass} ${colorClass} ${className}`}>
       {children}
     </p>
   );

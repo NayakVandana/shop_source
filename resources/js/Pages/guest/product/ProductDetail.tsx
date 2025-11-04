@@ -4,6 +4,7 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import axios from 'axios';
 import UserLayout from '../../../Layouts/UserLayout';
 import GuestLayout from '../../../Layouts/GuestLayout';
+import Button from '../../../Components/ui/Button';
 
 export default function ProductDetail() {
     const { auth } = usePage().props;
@@ -137,12 +138,12 @@ export default function ProductDetail() {
                             </div>
 
                             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-                                <button className="flex-1 sm:flex-none bg-indigo-600 text-white px-6 sm:px-8 py-3 sm:py-3.5 rounded-md hover:bg-indigo-700 active:bg-indigo-800 transition-colors font-medium text-sm sm:text-base touch-manipulation min-h-[44px]">
+                                <Button className="flex-1 sm:flex-none">
                                     Add to Cart
-                                </button>
-                                <button className="flex-1 sm:flex-none border border-gray-300 text-gray-700 px-6 sm:px-8 py-3 sm:py-3.5 rounded-md hover:bg-gray-50 active:bg-gray-100 transition-colors font-medium text-sm sm:text-base touch-manipulation min-h-[44px]">
+                                </Button>
+                                <Button variant="outline" className="flex-1 sm:flex-none">
                                     Add to Wishlist
-                                </button>
+                                </Button>
                             </div>
                         </div>
                     </div>

@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from '@inertiajs/react';
-import { colors } from '../theme/tokens';
+import Button from './ui/Button';
 
 export default function Navigation({ user }) {
     // Only allow admin view for admins
@@ -147,11 +147,11 @@ export default function Navigation({ user }) {
     };
 
 	return (
-		<nav className="bg-white shadow-lg sticky top-0 z-50" style={{ borderBottomColor: colors.surface.border }}>
+		<nav className="bg-background shadow-lg sticky top-0 z-50 border-b border-border-default">
 			<div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
 				<div className="flex justify-between h-14 sm:h-16">
 					<div className="flex items-center">
-						<Link href="/" className="text-lg sm:text-xl font-bold text-indigo-600 touch-manipulation">
+						<Link href="/" className="text-lg sm:text-xl font-bold text-primary-600 touch-manipulation">
 							ShopSource
 						</Link>
 					</div>
@@ -160,13 +160,13 @@ export default function Navigation({ user }) {
 					<div className="hidden lg:flex items-center space-x-4">
 						<Link
 							href="/"
-							className="text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium"
+							className="text-text-primary hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium"
 						>
 							Home
 						</Link>
 						<Link
 							href="/products"
-							className="text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium"
+							className="text-text-primary hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium"
 						>
 							Products
 						</Link>
@@ -175,39 +175,40 @@ export default function Navigation({ user }) {
 								{isAdmin && (
 									<Link
 										href={adminPanelUrl}
-										className="text-indigo-600 hover:text-indigo-700 px-3 py-2 rounded-md text-sm font-medium border border-indigo-600"
+										className="text-primary-600 hover:text-primary-700 px-3 py-2 rounded-md text-sm font-medium border border-primary-600"
 									>
 										Admin Panel
 									</Link>
 								)}
 								<div className="flex items-center">
-									<div className="h-8 w-8 bg-indigo-600 rounded-full flex items-center justify-center">
-										<span className="text-white text-sm font-medium">
+									<div className="h-8 w-8 bg-primary-600 rounded-full flex items-center justify-center">
+										<span className="text-text-inverse text-sm font-medium">
 											{user.name.charAt(0).toUpperCase()}
 										</span>
 									</div>
-									<span className="ml-2 text-gray-700">
+									<span className="ml-2 text-text-primary">
 										{user.name}
 									</span>
 								</div>
-								<button
+								<Button
 									onClick={handleLogout}
-									className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm font-medium"
+									variant="danger"
+									size="sm"
 								>
 									Logout
-								</button>
+								</Button>
 							</div>
 						) : (
 							<div className="flex items-center space-x-2">
 								<Link
 									href="/login"
-									className="text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium"
+									className="text-text-primary hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium"
 								>
 									Login
 								</Link>
 								<Link
 									href="/register"
-									className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 text-sm font-medium"
+									className="bg-primary-600 text-text-inverse px-4 py-2 rounded-md hover:bg-primary-700 text-sm font-medium"
 								>
 									Register
 								</Link>
@@ -220,7 +221,7 @@ export default function Navigation({ user }) {
 						<button
 							ref={menuButtonRef}
 							type="button"
-							className="inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-indigo-600 hover:bg-gray-100 active:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 touch-manipulation min-w-[44px] min-h-[44px]"
+							className="inline-flex items-center justify-center p-2 rounded-md text-text-primary hover:text-primary-600 hover:bg-secondary-100 active:bg-secondary-200 focus:outline-none focus:ring-2 focus:ring-primary-500 touch-manipulation min-w-[44px] min-h-[44px]"
 							aria-controls="mobile-menu"
 							aria-expanded={isMobileOpen}
 							onClick={() => setIsMobileOpen((v) => !v)}
@@ -244,64 +245,65 @@ export default function Navigation({ user }) {
 
 			{/* Mobile menu panel */}
 			<div id="mobile-menu" className={`${isMobileOpen ? 'block' : 'hidden'} lg:hidden`}>
-				<div ref={mobileMenuRef} className="space-y-1 px-3 sm:px-4 pt-2 pb-4 border-t border-gray-200 bg-white shadow-lg">
+				<div ref={mobileMenuRef} className="space-y-1 px-3 sm:px-4 pt-2 pb-4 border-t border-border-default bg-background shadow-lg">
 					<Link
 						href="/"
-						className="block text-gray-700 hover:text-indigo-600 hover:bg-gray-50 active:bg-gray-100 px-3 py-3 rounded-md text-base font-medium touch-manipulation min-h-[44px] flex items-center"
+						className="block text-text-primary hover:text-primary-600 hover:bg-secondary-50 active:bg-secondary-100 px-3 py-3 rounded-md text-base font-medium touch-manipulation min-h-[44px] flex items-center"
 						onClick={() => setIsMobileOpen(false)}
 					>
 						Home
 					</Link>
 					<Link
 						href="/products"
-						className="block text-gray-700 hover:text-indigo-600 hover:bg-gray-50 active:bg-gray-100 px-3 py-3 rounded-md text-base font-medium touch-manipulation min-h-[44px] flex items-center"
+						className="block text-text-primary hover:text-primary-600 hover:bg-secondary-50 active:bg-secondary-100 px-3 py-3 rounded-md text-base font-medium touch-manipulation min-h-[44px] flex items-center"
 						onClick={() => setIsMobileOpen(false)}
 					>
 						Products
 					</Link>
 
 					{user && user.name ? (
-						<div className="pt-2 border-t border-gray-200">
+						<div className="pt-2 border-t border-border-default">
 							{isAdmin && (
 								<Link
 									href={adminPanelUrl}
-									className="block text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 active:bg-indigo-100 px-3 py-3 rounded-md text-base font-medium border border-indigo-600 touch-manipulation min-h-[44px] flex items-center mb-2"
+									className="block text-primary-600 hover:text-primary-700 hover:bg-primary-50 active:bg-primary-100 px-3 py-3 rounded-md text-base font-medium border border-primary-600 touch-manipulation min-h-[44px] flex items-center mb-2"
 									onClick={() => setIsMobileOpen(false)}
 								>
 									Admin Panel
 								</Link>
 							)}
 							<div className="flex items-center px-3 py-3">
-								<div className="h-9 w-9 sm:h-10 sm:w-10 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
-									<span className="text-white text-sm font-medium">
+								<div className="h-9 w-9 sm:h-10 sm:w-10 bg-primary-600 rounded-full flex items-center justify-center flex-shrink-0">
+									<span className="text-text-inverse text-sm font-medium">
 										{user.name.charAt(0).toUpperCase()}
 									</span>
 								</div>
-								<span className="ml-3 text-gray-700 text-base font-medium truncate">
+								<span className="ml-3 text-text-primary text-base font-medium truncate">
 									{user.name}
 								</span>
 							</div>
 							<div className="px-3 pb-2">
-								<button
+								<Button
 									onClick={() => { setIsMobileOpen(false); handleLogout(); }}
-									className="w-full bg-red-600 text-white px-4 py-3 rounded-md hover:bg-red-700 active:bg-red-800 text-base font-medium transition-colors touch-manipulation min-h-[44px]"
+									variant="danger"
+									block
 								>
 									Logout
-								</button>
+								</Button>
 							</div>
 						</div>
 					) : (
-						<div className="pt-2 border-t border-gray-200 space-y-2">
+						<div className="pt-2 border-t border-border-default space-y-2">
 							<Link
 								href="/login"
-								className="block text-gray-700 hover:text-indigo-600 hover:bg-gray-50 active:bg-gray-100 px-3 py-3 rounded-md text-base font-medium touch-manipulation min-h-[44px] flex items-center"
+								className="block text-text-primary hover:text-primary-600 hover:bg-secondary-50 active:bg-secondary-100 px-3 py-3 rounded-md text-base font-medium touch-manipulation min-h-[44px] flex items-center"
 								onClick={() => setIsMobileOpen(false)}
 							>
 								Login
 							</Link>
 							<Link
 								href="/register"
-								className="block bg-indigo-600 text-white px-4 py-3 rounded-md hover:bg-indigo-700 active:bg-indigo-800 text-base font-medium text-center transition-colors touch-manipulation min-h-[44px] flex items-center justify-center"
+								className="block bg-primary-600 text-text-inverse px-4 py-3 rounded-md hover:bg-primary-700 active:bg-primary-800 text-base font-medium text-center transition-colors touch-manipulation min-h-[44px] flex items-center justify-center"
 								onClick={() => setIsMobileOpen(false)}
 							>
 								Register

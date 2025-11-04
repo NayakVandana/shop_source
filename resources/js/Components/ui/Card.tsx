@@ -1,10 +1,5 @@
 // @ts-nocheck
 import React from 'react';
-import { radii, shadows } from '../../theme/tokens';
-
-type CardProps = React.HTMLAttributes<HTMLDivElement> & {
-  padding?: 'none' | 'sm' | 'md' | 'lg';
-};
 
 const paddingClasses = {
   none: 'p-0',
@@ -13,13 +8,13 @@ const paddingClasses = {
   lg: 'p-6 sm:p-7 md:p-8',
 };
 
-export default function Card({ padding = 'md', className = '', ...props }: CardProps) {
+export default function Card({ padding = 'md', className = '', children }) {
+  const paddingClass = paddingClasses[padding] || paddingClasses['md'];
+
   return (
-    <div
-      className={`bg-white rounded-lg shadow ${paddingClasses[padding]} ${className}`}
-      style={{ borderRadius: radii.lg, boxShadow: shadows.card }}
-      {...props}
-    />
+    <div className={`bg-white rounded-lg shadow ${paddingClass} ${className}`}>
+      {children}
+    </div>
   );
 }
 

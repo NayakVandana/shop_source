@@ -6,6 +6,10 @@ import AdminLayout from '../../../Layouts/AdminLayout';
 import Card from '../../../Components/ui/Card';
 import Button from '../../../Components/ui/Button';
 import { Heading, Text } from '../../../Components/ui/Typography';
+import FormInput from '../../../Components/FormInputs/FormInput';
+import FormTextarea from '../../../Components/FormInputs/FormTextarea';
+import FormSelect from '../../../Components/FormInputs/FormSelect';
+import FormCheckbox from '../../../Components/FormInputs/FormCheckbox';
 
 export default function ProductForm() {
     const [loading, setLoading] = useState(false);
@@ -234,48 +238,31 @@ export default function ProductForm() {
                                 <Heading level={2} className="mb-4">Basic Information</Heading>
                                 
                                 <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Product Name <span className="text-red-500">*</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="name"
-                                            value={formData.name}
-                                            onChange={handleInputChange}
-                                            required
-                                            className={`w-full px-3 py-2 border rounded-md text-sm ${
-                                                errors.name ? 'border-red-500' : 'border-gray-300'
-                                            }`}
-                                        />
-                                        {errors.name && <Text className="text-red-500 text-xs mt-1">{errors.name[0]}</Text>}
-                                    </div>
+                                    <FormInput
+                                        type="text"
+                                        name="name"
+                                        value={formData.name}
+                                        onChange={handleInputChange}
+                                        required
+                                        title="Product Name *"
+                                        error={errors.name}
+                                    />
 
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Short Description
-                                        </label>
-                                        <textarea
-                                            name="short_description"
-                                            value={formData.short_description}
-                                            onChange={handleInputChange}
-                                            rows={2}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                                        />
-                                    </div>
+                                    <FormTextarea
+                                        name="short_description"
+                                        value={formData.short_description}
+                                        onChange={handleInputChange}
+                                        rows={2}
+                                        title="Short Description"
+                                    />
 
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Description
-                                        </label>
-                                        <textarea
-                                            name="description"
-                                            value={formData.description}
-                                            onChange={handleInputChange}
-                                            rows={5}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                                        />
-                                    </div>
+                                    <FormTextarea
+                                        name="description"
+                                        value={formData.description}
+                                        onChange={handleInputChange}
+                                        rows={5}
+                                        title="Description"
+                                    />
                                 </div>
                             </Card>
 
@@ -284,72 +271,48 @@ export default function ProductForm() {
                                 <Heading level={2} className="mb-4">Pricing & Inventory</Heading>
                                 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Price <span className="text-red-500">*</span>
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="price"
-                                            value={formData.price}
-                                            onChange={handleInputChange}
-                                            step="0.01"
-                                            min="0"
-                                            required
-                                            className={`w-full px-3 py-2 border rounded-md text-sm ${
-                                                errors.price ? 'border-red-500' : 'border-gray-300'
-                                            }`}
-                                        />
-                                        {errors.price && <Text className="text-red-500 text-xs mt-1">{errors.price[0]}</Text>}
-                                    </div>
+                                    <FormInput
+                                        type="number"
+                                        name="price"
+                                        value={formData.price}
+                                        onChange={handleInputChange}
+                                        step="0.01"
+                                        min="0"
+                                        required
+                                        title="Price *"
+                                        error={errors.price}
+                                    />
 
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Sale Price
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="sale_price"
-                                            value={formData.sale_price}
-                                            onChange={handleInputChange}
-                                            step="0.01"
-                                            min="0"
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                                        />
-                                    </div>
+                                    <FormInput
+                                        type="number"
+                                        name="sale_price"
+                                        value={formData.sale_price}
+                                        onChange={handleInputChange}
+                                        step="0.01"
+                                        min="0"
+                                        title="Sale Price"
+                                    />
 
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Stock Quantity <span className="text-red-500">*</span>
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="stock_quantity"
-                                            value={formData.stock_quantity}
-                                            onChange={handleInputChange}
-                                            min="0"
-                                            required
-                                            className={`w-full px-3 py-2 border rounded-md text-sm ${
-                                                errors.stock_quantity ? 'border-red-500' : 'border-gray-300'
-                                            }`}
-                                        />
-                                        {errors.stock_quantity && <Text className="text-red-500 text-xs mt-1">{errors.stock_quantity[0]}</Text>}
-                                    </div>
+                                    <FormInput
+                                        type="number"
+                                        name="stock_quantity"
+                                        value={formData.stock_quantity}
+                                        onChange={handleInputChange}
+                                        min="0"
+                                        required
+                                        title="Stock Quantity *"
+                                        error={errors.stock_quantity}
+                                    />
 
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Weight (kg)
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="weight"
-                                            value={formData.weight}
-                                            onChange={handleInputChange}
-                                            step="0.01"
-                                            min="0"
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                                        />
-                                    </div>
+                                    <FormInput
+                                        type="number"
+                                        name="weight"
+                                        value={formData.weight}
+                                        onChange={handleInputChange}
+                                        step="0.01"
+                                        min="0"
+                                        title="Weight (kg)"
+                                    />
                                 </div>
                             </Card>
                         </div>
@@ -359,26 +322,19 @@ export default function ProductForm() {
                             {/* Category */}
                             <Card>
                                 <Heading level={2} className="mb-4">Category</Heading>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Category <span className="text-red-500">*</span>
-                                    </label>
-                                    <select
-                                        name="category_id"
-                                        value={formData.category_id}
-                                        onChange={handleInputChange}
-                                        required
-                                        className={`w-full px-3 py-2 border rounded-md text-sm ${
-                                            errors.category_id ? 'border-red-500' : 'border-gray-300'
-                                        }`}
-                                    >
-                                        <option value="">Select Category</option>
-                                        {categories.map((cat) => (
-                                            <option key={cat.uuid} value={cat.id}>{cat.name}</option>
-                                        ))}
-                                    </select>
-                                    {errors.category_id && <Text className="text-red-500 text-xs mt-1">{errors.category_id[0]}</Text>}
-                                </div>
+                                <FormSelect
+                                    name="category_id"
+                                    value={formData.category_id}
+                                    onChange={handleInputChange}
+                                    required
+                                    title="Category *"
+                                    error={errors.category_id}
+                                >
+                                    <option value="">Select Category</option>
+                                    {categories.map((cat) => (
+                                        <option key={cat.uuid} value={cat.id}>{cat.name}</option>
+                                    ))}
+                                </FormSelect>
                             </Card>
 
                             {/* Images */}
@@ -386,14 +342,11 @@ export default function ProductForm() {
                                 <Heading level={2} className="mb-4">Images</Heading>
                                 <div className="space-y-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Main Image
-                                        </label>
-                                        <input
+                                        <FormInput
                                             type="file"
                                             accept="image/*"
                                             onChange={handleImageChange}
-                                            className="w-full text-sm"
+                                            title="Main Image"
                                         />
                                         {imagePreview && (
                                             <img
@@ -405,15 +358,12 @@ export default function ProductForm() {
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Additional Images
-                                        </label>
-                                        <input
+                                        <FormInput
                                             type="file"
                                             accept="image/*"
                                             multiple
                                             onChange={handleImagesChange}
-                                            className="w-full text-sm"
+                                            title="Additional Images"
                                         />
                                         {imagesPreview.length > 0 && (
                                             <div className="mt-2 grid grid-cols-2 gap-2">
@@ -435,36 +385,27 @@ export default function ProductForm() {
                             <Card>
                                 <Heading level={2} className="mb-4">Status</Heading>
                                 <div className="space-y-3">
-                                    <label className="flex items-center">
-                                        <input
-                                            type="checkbox"
-                                            name="is_active"
-                                            checked={formData.is_active}
-                                            onChange={handleInputChange}
-                                            className="mr-2"
-                                        />
-                                        <Text>Active</Text>
-                                    </label>
-                                    <label className="flex items-center">
-                                        <input
-                                            type="checkbox"
-                                            name="is_featured"
-                                            checked={formData.is_featured}
-                                            onChange={handleInputChange}
-                                            className="mr-2"
-                                        />
-                                        <Text>Featured</Text>
-                                    </label>
-                                    <label className="flex items-center">
-                                        <input
-                                            type="checkbox"
-                                            name="in_stock"
-                                            checked={formData.in_stock}
-                                            onChange={handleInputChange}
-                                            className="mr-2"
-                                        />
-                                        <Text>In Stock</Text>
-                                    </label>
+                                    <FormCheckbox
+                                        name="is_active"
+                                        checked={formData.is_active}
+                                        onChange={handleInputChange}
+                                        label="Active"
+                                        nomargin
+                                    />
+                                    <FormCheckbox
+                                        name="is_featured"
+                                        checked={formData.is_featured}
+                                        onChange={handleInputChange}
+                                        label="Featured"
+                                        nomargin
+                                    />
+                                    <FormCheckbox
+                                        name="in_stock"
+                                        checked={formData.in_stock}
+                                        onChange={handleInputChange}
+                                        label="In Stock"
+                                        nomargin
+                                    />
                                 </div>
                             </Card>
 

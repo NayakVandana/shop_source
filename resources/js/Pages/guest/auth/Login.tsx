@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { FormEvent } from 'react';
 import GuestLayout from '../../../Layouts/GuestLayout';
+import FormInput from '../../../Components/FormInputs/FormInput';
+import Button from '../../../Components/ui/Button';
 
 export default function Login() {
     const { auth } = usePage().props;
@@ -86,49 +88,39 @@ export default function Login() {
                         )}
                         
                         <div className="space-y-4 sm:space-y-5">
-                            <div>
-                                <label htmlFor="email" className="block text-sm sm:text-base font-medium text-gray-700 mb-1.5">
-                                    Email Address
-                                </label>
-                                <input
-                                    id="email"
-                                    name="email"
-                                    type="email"
-                                    autoComplete="email"
-                                    required
-                                    className="appearance-none relative block w-full px-3 sm:px-4 py-3 sm:py-3.5 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base sm:text-sm min-h-[44px]"
-                                    placeholder="Enter your email"
-                                    value={formData.email}
-                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                />
-                            </div>
+                            <FormInput
+                                id="email"
+                                name="email"
+                                type="email"
+                                autoComplete="email"
+                                required
+                                placeholder="Enter your email"
+                                value={formData.email}
+                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                title="Email Address"
+                            />
                             
-                            <div>
-                                <label htmlFor="password" className="block text-sm sm:text-base font-medium text-gray-700 mb-1.5">
-                                    Password
-                                </label>
-                                <input
-                                    id="password"
-                                    name="password"
-                                    type="password"
-                                    autoComplete="current-password"
-                                    required
-                                    className="appearance-none relative block w-full px-3 sm:px-4 py-3 sm:py-3.5 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base sm:text-sm min-h-[44px]"
-                                    placeholder="Enter your password"
-                                    value={formData.password}
-                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                />
-                            </div>
+                            <FormInput
+                                id="password"
+                                name="password"
+                                type="password"
+                                autoComplete="current-password"
+                                required
+                                placeholder="Enter your password"
+                                value={formData.password}
+                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                title="Password"
+                            />
                         </div>
 
                         <div>
-                            <button
+                            <Button
                                 type="submit"
                                 disabled={processing}
-                                className="group relative w-full flex justify-center py-3 sm:py-3.5 px-4 border border-transparent text-base sm:text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors touch-manipulation min-h-[44px]"
+                                block
                             >
                                 {processing ? 'Signing In...' : 'Sign In'}
-                            </button>
+                            </Button>
                         </div>
                     </form>
                 </div>

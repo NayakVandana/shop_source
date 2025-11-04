@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import { FormEvent } from 'react';
 import GuestLayout from '../../../Layouts/GuestLayout';
+import FormInput from '../../../Components/FormInputs/FormInput';
+import Button from '../../../Components/ui/Button';
 
 export default function Register() {
     const [formData, setFormData] = useState({
@@ -76,64 +78,49 @@ export default function Register() {
                         )}
                         
                         <div className="space-y-4 sm:space-y-5">
-                            <div>
-                                <label htmlFor="name" className="block text-sm sm:text-base font-medium text-gray-700 mb-1.5">
-                                    Full Name
-                                </label>
-                                <input
-                                    id="name"
-                                    name="name"
-                                    type="text"
-                                    required
-                                    className="appearance-none relative block w-full px-3 sm:px-4 py-3 sm:py-3.5 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base sm:text-sm min-h-[44px]"
-                                    placeholder="Enter your full name"
-                                    value={formData.name}
-                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                />
-                            </div>
+                            <FormInput
+                                id="name"
+                                name="name"
+                                type="text"
+                                required
+                                placeholder="Enter your full name"
+                                value={formData.name}
+                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                title="Full Name"
+                            />
                             
-                            <div>
-                                <label htmlFor="email" className="block text-sm sm:text-base font-medium text-gray-700 mb-1.5">
-                                    Email Address
-                                </label>
-                                <input
-                                    id="email"
-                                    name="email"
-                                    type="email"
-                                    autoComplete="email"
-                                    required
-                                    className="appearance-none relative block w-full px-3 sm:px-4 py-3 sm:py-3.5 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base sm:text-sm min-h-[44px]"
-                                    placeholder="Enter your email"
-                                    value={formData.email}
-                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                />
-                            </div>
+                            <FormInput
+                                id="email"
+                                name="email"
+                                type="email"
+                                autoComplete="email"
+                                required
+                                placeholder="Enter your email"
+                                value={formData.email}
+                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                title="Email Address"
+                            />
                             
-                            <div>
-                                <label htmlFor="mobile" className="block text-sm sm:text-base font-medium text-gray-700 mb-1.5">
-                                    Mobile Number
-                                </label>
-                                <input
-                                    id="mobile"
-                                    name="mobile"
-                                    type="tel"
-                                    required
-                                    className="appearance-none relative block w-full px-3 sm:px-4 py-3 sm:py-3.5 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base sm:text-sm min-h-[44px]"
-                                    placeholder="Enter your mobile number"
-                                    value={formData.mobile}
-                                    onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
-                                />
-                            </div>
+                            <FormInput
+                                id="mobile"
+                                name="mobile"
+                                type="tel"
+                                required
+                                placeholder="Enter your mobile number"
+                                value={formData.mobile}
+                                onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
+                                title="Mobile Number"
+                            />
                         </div>
 
                         <div>
-                            <button
+                            <Button
                                 type="submit"
                                 disabled={processing}
-                                className="group relative w-full flex justify-center py-3 sm:py-3.5 px-4 border border-transparent text-base sm:text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors touch-manipulation min-h-[44px]"
+                                block
                             >
                                 {processing ? 'Creating Account...' : 'Create Account'}
-                            </button>
+                            </Button>
                         </div>
                     </form>
                 </div>

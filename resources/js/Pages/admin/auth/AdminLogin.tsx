@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import { Head } from '@inertiajs/react';
 import { FormEvent } from 'react';
 import GuestLayout from '../../../Layouts/GuestLayout';
+import FormInput from '../../../Components/FormInputs/FormInput';
+import Button from '../../../Components/ui/Button';
 
 export default function AdminLogin() {
     const [formData, setFormData] = useState({
@@ -91,34 +93,27 @@ export default function AdminLogin() {
                         )}
                         
                         <div className="space-y-4 sm:space-y-5">
-                            <div>
-                                <label htmlFor="user_id" className="block text-sm sm:text-base font-medium text-gray-700 mb-1.5">
-                                    Admin User ID
-                                </label>
-                                <input
-                                    id="user_id"
-                                    name="user_id"
-                                    type="text"
-                                    required
-                                    className="appearance-none relative block w-full px-3 sm:px-4 py-3 sm:py-3.5 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base sm:text-sm min-h-[44px]"
-                                    placeholder="Enter your admin user ID (e.g., 1)"
-                                    value={formData.user_id}
-                                    onChange={(e) => setFormData({ ...formData, user_id: e.target.value })}
-                                />
-                                <p className="mt-1.5 text-xs sm:text-sm text-gray-500">
-                                    Enter your admin user ID from the database
-                                </p>
-                            </div>
+                            <FormInput
+                                id="user_id"
+                                name="user_id"
+                                type="text"
+                                required
+                                placeholder="Enter your admin user ID (e.g., 1)"
+                                value={formData.user_id}
+                                onChange={(e) => setFormData({ ...formData, user_id: e.target.value })}
+                                title="Admin User ID"
+                                helpertext="Enter your admin user ID from the database"
+                            />
                         </div>
 
                         <div>
-                            <button
+                            <Button
                                 type="submit"
                                 disabled={processing}
-                                className="group relative w-full flex justify-center py-3 sm:py-3.5 px-4 border border-transparent text-base sm:text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors touch-manipulation min-h-[44px]"
+                                block
                             >
                                 {processing ? 'Signing In...' : 'Sign In'}
-                            </button>
+                            </Button>
                         </div>
                     </form>
                 </div>
