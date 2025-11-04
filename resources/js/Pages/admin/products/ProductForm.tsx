@@ -15,6 +15,7 @@ export default function ProductForm() {
     const [loading, setLoading] = useState(false);
     const [categories, setCategories] = useState([]);
     const [errors, setErrors] = useState({});
+    const [generalError, setGeneralError] = useState('');
     
     const [formData, setFormData] = useState({
         name: '',
@@ -113,6 +114,7 @@ export default function ProductForm() {
             ...prev,
             [name]: type === 'checkbox' ? checked : value
         }));
+        // Clear field error when user starts typing
         if (errors[name]) {
             setErrors(prev => {
                 const newErrors = { ...prev };
@@ -120,14 +122,32 @@ export default function ProductForm() {
                 return newErrors;
             });
         }
+        // Clear general error when user makes changes
+        if (generalError) {
+            setGeneralError('');
+        }
     };
 
     const handleImageChange = (e) => {
         const file = e.target.files?.[0];
         if (file) {
+            // Validate file type
             if (!file.type.startsWith('image/')) {
-                alert('Please select an image file');
+                setErrors(prev => ({ ...prev, image: 'Please select a valid image file' }));
                 return;
+            }
+            // Validate file size (5MB max)
+            if (file.size > 5 * 1024 * 1024) {
+                setErrors(prev => ({ ...prev, image: 'Image size must be less than 5MB' }));
+                return;
+            }
+            // Clear error if validation passes
+            if (errors.image) {
+                setErrors(prev => {
+                    const newErrors = { ...prev };
+                    delete newErrors.image;
+                    return newErrors;
+                });
             }
             setImagePreview(URL.createObjectURL(file));
             setFormData(prev => ({ ...prev, image: file }));
@@ -137,18 +157,112 @@ export default function ProductForm() {
     const handleImagesChange = (e) => {
         const files = Array.from(e.target.files || []);
         const imageFiles = files.filter(f => f.type.startsWith('image/'));
+        
+        // Validate all files are images
         if (imageFiles.length !== files.length) {
-            alert('Please select only image files');
+            setErrors(prev => ({ ...prev, images: 'Please select only valid image files' }));
+            return;
         }
+        
+        // Validate file sizes (5MB max per file)
+        const oversizedFiles = imageFiles.filter(f => f.size > 5 * 1024 * 1024);
+        if (oversizedFiles.length > 0) {
+            setErrors(prev => ({ ...prev, images: 'All images must be less than 5MB each' }));
+            return;
+        }
+        
+        // Clear error if validation passes
+        if (errors.images) {
+            setErrors(prev => {
+                const newErrors = { ...prev };
+                delete newErrors.images;
+                return newErrors;
+            });
+        }
+        
         const previews = imageFiles.map(f => URL.createObjectURL(f));
         setImagesPreview(previews);
         setFormData(prev => ({ ...prev, images: imageFiles }));
+    };
+
+    const validateForm = () => {
+        const validationErrors = {};
+        
+        // Required field validations
+        if (!formData.name || (typeof formData.name === 'string' && formData.name.trim() === '')) {
+            validationErrors.name = 'Product name is required.';
+        }
+        
+        if (!formData.price || formData.price === '' || formData.price === null || formData.price === undefined) {
+            validationErrors.price = 'Price is required.';
+        } else {
+            const price = parseFloat(formData.price);
+            if (isNaN(price) || price <= 0) {
+                validationErrors.price = 'Price must be a valid number greater than 0.';
+            }
+        }
+        
+        if (!formData.category_id || formData.category_id === '' || formData.category_id === null || formData.category_id === undefined) {
+            validationErrors.category_id = 'Category is required.';
+        }
+        
+        if (formData.stock_quantity === '' || formData.stock_quantity === null || formData.stock_quantity === undefined) {
+            validationErrors.stock_quantity = 'Stock quantity is required.';
+        } else {
+            const stockQty = parseInt(formData.stock_quantity);
+            if (isNaN(stockQty) || stockQty < 0) {
+                validationErrors.stock_quantity = 'Stock quantity must be a valid number (0 or greater).';
+            }
+        }
+        
+        // Validate sale_price if provided (must be less than price)
+        if (formData.sale_price && formData.sale_price !== '' && formData.sale_price !== null && formData.sale_price !== undefined) {
+            const salePrice = parseFloat(formData.sale_price);
+            const price = parseFloat(formData.price);
+            if (isNaN(salePrice) || salePrice < 0) {
+                validationErrors.sale_price = 'Sale price must be a valid number greater than or equal to 0.';
+            } else if (price && !isNaN(price) && salePrice >= price) {
+                validationErrors.sale_price = 'Sale price must be less than the regular price.';
+            }
+        }
+        
+        // Validate weight if provided
+        if (formData.weight && formData.weight !== '' && formData.weight !== null && formData.weight !== undefined) {
+            const weight = parseFloat(formData.weight);
+            if (isNaN(weight) || weight < 0) {
+                validationErrors.weight = 'Weight must be a valid number greater than or equal to 0.';
+            }
+        }
+        
+        return validationErrors;
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
         setErrors({});
+        setGeneralError('');
+
+        // Client-side validation
+        const validationErrors = validateForm();
+        if (Object.keys(validationErrors).length > 0) {
+            setErrors(validationErrors);
+            setGeneralError('Please fill in all required fields correctly.');
+            setLoading(false);
+            
+            // Scroll to first error
+            setTimeout(() => {
+                const firstErrorField = Object.keys(validationErrors)[0];
+                if (firstErrorField) {
+                    const element = document.querySelector(`[name="${firstErrorField}"]`);
+                    if (element) {
+                        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        element.focus();
+                    }
+                }
+            }, 100);
+            return;
+        }
 
         try {
             const token = getToken();
@@ -190,14 +304,41 @@ export default function ProductForm() {
                 const tokenQuery = token ? `?token=${token}` : '';
                 router.visit(`/admin/products${tokenQuery}`);
             } else {
-                setErrors(res.data?.data?.errors || {});
-                alert(res.data?.message || 'Operation failed');
+                const errorData = res.data?.data?.errors || {};
+                setErrors(errorData);
+                setGeneralError(res.data?.message || 'Please fix the errors below and try again.');
+                
+                // Scroll to first error
+                setTimeout(() => {
+                    const firstErrorField = Object.keys(errorData)[0];
+                    if (firstErrorField) {
+                        const element = document.querySelector(`[name="${firstErrorField}"]`);
+                        if (element) {
+                            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            element.focus();
+                        }
+                    }
+                }, 100);
             }
         } catch (err) {
             if (err.response?.data?.data?.errors) {
-                setErrors(err.response.data.data.errors);
+                const errorData = err.response.data.data.errors;
+                setErrors(errorData);
+                setGeneralError(err.response?.data?.message || 'Validation failed. Please check the errors below.');
+                
+                // Scroll to first error
+                setTimeout(() => {
+                    const firstErrorField = Object.keys(errorData)[0];
+                    if (firstErrorField) {
+                        const element = document.querySelector(`[name="${firstErrorField}"]`);
+                        if (element) {
+                            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            element.focus();
+                        }
+                    }
+                }, 100);
             } else {
-                alert('Failed to save product');
+                setGeneralError(err.message || 'Failed to save product. Please try again.');
             }
         } finally {
             setLoading(false);
@@ -223,13 +364,13 @@ export default function ProductForm() {
             <Head title={isEdit ? 'Edit Product' : 'Create Product'} />
             <div className="p-4 sm:p-6 lg:p-8">
                 <div className="mb-6">
-                    <Link href={`/admin/products${tokenQuery}`} className="text-indigo-600 hover:text-indigo-700 mb-4 inline-block">
+                    <Link href={`/admin/products${tokenQuery}`} className="text-primary-600 hover:text-primary-700 mb-4 inline-block">
                         ← Back to Products
                     </Link>
                     <Heading level={1}>{isEdit ? 'Edit Product' : 'Create New Product'}</Heading>
                 </div>
 
-                <form onSubmit={handleSubmit}>
+                <form onSubmit={handleSubmit} noValidate>
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         {/* Main Form */}
                         <div className="lg:col-span-2 space-y-6">
@@ -243,7 +384,6 @@ export default function ProductForm() {
                                         name="name"
                                         value={formData.name}
                                         onChange={handleInputChange}
-                                        required
                                         title="Product Name *"
                                         error={errors.name}
                                     />
@@ -254,6 +394,7 @@ export default function ProductForm() {
                                         onChange={handleInputChange}
                                         rows={2}
                                         title="Short Description"
+                                        error={errors.short_description}
                                     />
 
                                     <FormTextarea
@@ -262,6 +403,7 @@ export default function ProductForm() {
                                         onChange={handleInputChange}
                                         rows={5}
                                         title="Description"
+                                        error={errors.description}
                                     />
                                 </div>
                             </Card>
@@ -278,7 +420,6 @@ export default function ProductForm() {
                                         onChange={handleInputChange}
                                         step="0.01"
                                         min="0"
-                                        required
                                         title="Price *"
                                         error={errors.price}
                                     />
@@ -291,6 +432,7 @@ export default function ProductForm() {
                                         step="0.01"
                                         min="0"
                                         title="Sale Price"
+                                        error={errors.sale_price}
                                     />
 
                                     <FormInput
@@ -299,7 +441,6 @@ export default function ProductForm() {
                                         value={formData.stock_quantity}
                                         onChange={handleInputChange}
                                         min="0"
-                                        required
                                         title="Stock Quantity *"
                                         error={errors.stock_quantity}
                                     />
@@ -312,6 +453,7 @@ export default function ProductForm() {
                                         step="0.01"
                                         min="0"
                                         title="Weight (kg)"
+                                        error={errors.weight}
                                     />
                                 </div>
                             </Card>
@@ -326,7 +468,6 @@ export default function ProductForm() {
                                     name="category_id"
                                     value={formData.category_id}
                                     onChange={handleInputChange}
-                                    required
                                     title="Category *"
                                     error={errors.category_id}
                                 >
@@ -347,6 +488,7 @@ export default function ProductForm() {
                                             accept="image/*"
                                             onChange={handleImageChange}
                                             title="Main Image"
+                                            error={errors.image}
                                         />
                                         {imagePreview && (
                                             <img
@@ -364,6 +506,7 @@ export default function ProductForm() {
                                             multiple
                                             onChange={handleImagesChange}
                                             title="Additional Images"
+                                            error={errors.images}
                                         />
                                         {imagesPreview.length > 0 && (
                                             <div className="mt-2 grid grid-cols-2 gap-2">
