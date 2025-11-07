@@ -18,7 +18,7 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         try {
-            $query = Product::with('category');
+            $query = Product::with(['category', 'media']);
             
             // Search functionality
             if ($request->has('search')) {
@@ -66,7 +66,12 @@ class ProductController extends Controller
                 'description' => 'nullable|string',
                 'price' => 'required|numeric|min:0',
                 'category_id' => 'required|exists:categories,id',
-                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+                'images' => 'nullable|array',
+                'images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+                'video' => 'nullable|mimes:mp4,avi,mov,wmv,flv,webm|max:10240',
+                'videos' => 'nullable|array',
+                'videos.*' => 'mimes:mp4,avi,mov,wmv,flv,webm|max:10240',
                 'is_featured' => 'boolean',
                 'stock_quantity' => 'required|integer|min:0'
             ]);
@@ -75,16 +80,31 @@ class ProductController extends Controller
                 return $this->sendJsonResponse(false, 'Validation failed', $validator->errors(), 422);
             }
 
-            $data = $request->all();
+            $data = $request->except(['image', 'images', 'video', 'videos']);
             
-            // Handle image upload
+            $product = Product::create($data);
+            
+            // Handle image upload using new media system
             if ($request->hasFile('image')) {
-                $imagePath = $request->file('image')->store('products', 'public');
-                $data['image'] = $imagePath;
+                $product->storeImages($request->file('image'));
+            }
+            
+            // Handle multiple images
+            if ($request->hasFile('images')) {
+                $product->storeImages($request->file('images'));
+            }
+            
+            // Handle video upload
+            if ($request->hasFile('video')) {
+                $product->storeVideos($request->file('video'));
+            }
+            
+            // Handle multiple videos
+            if ($request->hasFile('videos')) {
+                $product->storeVideos($request->file('videos'));
             }
 
-            $product = Product::create($data);
-            $product->load('category');
+            $product->load(['category', 'media']);
 
             return $this->sendJsonResponse(true, 'Product created successfully', $product, 201);
             
@@ -103,7 +123,7 @@ class ProductController extends Controller
                 'id' => 'required|string'
             ]);
 
-            $product = Product::with('category')->where('uuid', $data['id'])->firstOrFail();
+            $product = Product::with(['category', 'media'])->where('uuid', $data['id'])->firstOrFail();
             
             return $this->sendJsonResponse(true, 'Product retrieved successfully', $product);
             
@@ -129,7 +149,12 @@ class ProductController extends Controller
                 'description' => 'nullable|string',
                 'price' => 'sometimes|required|numeric|min:0',
                 'category_id' => 'sometimes|required|exists:categories,id',
-                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+                'images' => 'nullable|array',
+                'images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+                'video' => 'nullable|mimes:mp4,avi,mov,wmv,flv,webm|max:10240',
+                'videos' => 'nullable|array',
+                'videos.*' => 'mimes:mp4,avi,mov,wmv,flv,webm|max:10240',
                 'is_featured' => 'boolean',
                 'stock_quantity' => 'sometimes|required|integer|min:0'
             ]);
@@ -138,21 +163,34 @@ class ProductController extends Controller
                 return $this->sendJsonResponse(false, 'Validation failed', $validator->errors(), 422);
             }
 
-            $updateData = $request->except(['id']);
+            $updateData = $request->except(['id', 'image', 'images', 'video', 'videos']);
             
-            // Handle image upload
+            // Handle image upload using new media system
             if ($request->hasFile('image')) {
-                // Delete old image if exists
-                if ($product->image) {
-                    \Illuminate\Support\Facades\Storage::disk('public')->delete($product->image);
-                }
-                
-                $imagePath = $request->file('image')->store('products', 'public');
-                $updateData['image'] = $imagePath;
+                $product->deleteImages();
+                $product->storeImages($request->file('image'));
+            }
+            
+            // Handle multiple images
+            if ($request->hasFile('images')) {
+                $product->deleteImages();
+                $product->storeImages($request->file('images'));
+            }
+            
+            // Handle video upload
+            if ($request->hasFile('video')) {
+                $product->deleteVideos();
+                $product->storeVideos($request->file('video'));
+            }
+            
+            // Handle multiple videos
+            if ($request->hasFile('videos')) {
+                $product->deleteVideos();
+                $product->storeVideos($request->file('videos'));
             }
 
             $product->update($updateData);
-            $product->load('category');
+            $product->load(['category', 'media']);
 
             return $this->sendJsonResponse(true, 'Product updated successfully', $product);
             
@@ -173,10 +211,9 @@ class ProductController extends Controller
 
             $product = Product::where('uuid', $data['id'])->firstOrFail();
 
-            // Delete associated image
-            if ($product->image) {
-                \Illuminate\Support\Facades\Storage::disk('public')->delete($product->image);
-            }
+            // Delete associated media (handled automatically by model, but explicit for clarity)
+            $product->deleteImages();
+            $product->deleteVideos();
             
             $product->delete();
 

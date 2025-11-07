@@ -25,7 +25,7 @@ class DashboardController extends Controller
                 'low_stock_products' => Product::where('stock_quantity', '<', 10)->count(),
             ];
 
-            $recent_products = Product::with('category')
+            $recent_products = Product::with(['category', 'media'])
                 ->latest()
                 ->limit(5)
                 ->get();

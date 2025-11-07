@@ -7,38 +7,19 @@ import Card from '../../../Components/ui/Card';
 import Button from '../../../Components/ui/Button';
 import { Heading, Text } from '../../../Components/ui/Typography';
 
-export default function AdminProducts() {
-    const [products, setProducts] = useState([]);
+export default function AdminCategories() {
+    const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [search, setSearch] = useState('');
-    const [filterCategory, setFilterCategory] = useState('');
     const [filterStatus, setFilterStatus] = useState('');
-    const [categories, setCategories] = useState([]);
     const [pagination, setPagination] = useState({ current_page: 1, last_page: 1 });
 
     useEffect(() => {
         loadCategories();
-        loadProducts();
     }, []);
 
-    const loadCategories = async () => {
-        try {
-            const urlParams = new URLSearchParams(window.location.search);
-            const token = urlParams.get('token') || localStorage.getItem('admin_token') || '';
-            
-            const res = await axios.post('/api/admin/categories/list', {}, {
-                headers: { AdminToken: token }
-            });
-            if (res.data && res.data.success) {
-                setCategories(res.data.data?.data || res.data.data || []);
-            }
-        } catch (err) {
-            console.error('Failed to load categories:', err);
-        }
-    };
-
-    const loadProducts = async (page = 1) => {
+    const loadCategories = async (page = 1) => {
         setLoading(true);
         setError(null);
         try {
@@ -50,25 +31,24 @@ export default function AdminProducts() {
                 page,
             };
             if (search) params.search = search;
-            if (filterCategory) params.category_id = filterCategory;
             if (filterStatus !== '') params.is_active = filterStatus === 'active';
 
-            const res = await axios.post('/api/admin/products/index', params, {
+            const res = await axios.post('/api/admin/categories/index', params, {
                 headers: { AdminToken: token }
             });
             
             if (res.data && res.data.success) {
                 const data = res.data.data;
-                setProducts(Array.isArray(data?.data) ? data.data : []);
+                setCategories(Array.isArray(data?.data) ? data.data : []);
                 setPagination({
                     current_page: data?.current_page || 1,
                     last_page: data?.last_page || 1,
                 });
             } else {
-                setProducts([]);
+                setCategories([]);
             }
         } catch (err) {
-            setError('Failed to load products');
+            setError('Failed to load categories');
             console.error(err);
         } finally {
             setLoading(false);
@@ -76,40 +56,34 @@ export default function AdminProducts() {
     };
 
     const handleSearch = () => {
-        loadProducts(1);
+        loadCategories(1);
     };
 
     const handleDelete = async (uuid: string) => {
-        if (!confirm('Are you sure you want to delete this product?')) return;
+        if (!confirm('Are you sure you want to delete this category? This action cannot be undone if the category has products.')) return;
         
         try {
             const urlParams = new URLSearchParams(window.location.search);
             const token = urlParams.get('token') || localStorage.getItem('admin_token') || '';
             
-            await axios.post('/api/admin/products/destroy', { id: uuid }, {
+            const res = await axios.post('/api/admin/categories/destroy', { id: uuid }, {
                 headers: { AdminToken: token }
             });
-            loadProducts(pagination.current_page);
+            
+            if (res.data && res.data.success) {
+                loadCategories(pagination.current_page);
+            } else {
+                alert(res.data?.message || 'Failed to delete category');
+            }
         } catch (err) {
-            alert('Failed to delete product');
+            const errorMsg = err.response?.data?.message || 'Failed to delete category';
+            alert(errorMsg);
         }
     };
 
-    const getImageUrl = (product) => {
-        // Check new media system first
-        if (product.media && product.media.length > 0) {
-            const imageMedia = product.media.find(m => m.type === 'image') || product.media[0];
-            if (imageMedia) {
-                const url = imageMedia.url || (imageMedia.file_path?.startsWith('http') 
-                    ? imageMedia.file_path 
-                    : `/storage/${imageMedia.file_path}`);
-                return url || '/images/placeholder.png';
-            }
-        }
-        // Fallback to legacy images array
-        if (product.images && product.images.length > 0) {
-            const img = product.images[0];
-            return img.startsWith('http') ? img : `/storage/${img}`;
+    const getImageUrl = (category) => {
+        if (category.image) {
+            return category.image.startsWith('http') ? category.image : `/storage/${category.image}`;
         }
         return '/images/placeholder.png';
     };
@@ -121,40 +95,28 @@ export default function AdminProducts() {
 
     return (
         <AdminLayout>
-            <Head title="Admin - Products" />
+            <Head title="Admin - Categories" />
             <div className="p-4 sm:p-6 lg:p-8">
                 <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <Heading level={1}>Products Management</Heading>
-                    <Link href={`/admin/products/create${tokenQuery}`}>
-                        <Button>Add New Product</Button>
+                    <Heading level={1}>Categories Management</Heading>
+                    <Link href={`/admin/categories/create${tokenQuery}`}>
+                        <Button>Add New Category</Button>
                     </Link>
                 </div>
 
                 {/* Filters */}
                 <Card className="mb-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
                             <input
                                 type="text"
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                placeholder="Name, SKU..."
+                                placeholder="Name, description..."
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                             />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                            <select
-                                value={filterCategory}
-                                onChange={(e) => setFilterCategory(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                            >
-                                <option value="">All Categories</option>
-                                {categories.map((cat) => (
-                                    <option key={cat.uuid} value={cat.id}>{cat.name}</option>
-                                ))}
-                            </select>
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
@@ -174,11 +136,11 @@ export default function AdminProducts() {
                     </div>
                 </Card>
 
-                {/* Products Table */}
+                {/* Categories Table */}
                 {loading ? (
                     <Card>
                         <div className="text-center py-12">
-                            <Text>Loading products...</Text>
+                            <Text>Loading categories...</Text>
                         </div>
                     </Card>
                 ) : error ? (
@@ -187,10 +149,10 @@ export default function AdminProducts() {
                             <Text>{error}</Text>
                         </div>
                     </Card>
-                ) : products.length === 0 ? (
+                ) : categories.length === 0 ? (
                     <Card>
                         <div className="text-center py-12">
-                            <Text muted>No products found</Text>
+                            <Text muted>No categories found</Text>
                         </div>
                     </Card>
                 ) : (
@@ -202,20 +164,20 @@ export default function AdminProducts() {
                                         <tr>
                                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Image</th>
                                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Slug</th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Products</th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sort Order</th>
                                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                             <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="bg-white divide-y divide-gray-200">
-                                        {products.map((product) => (
-                                            <tr key={product.uuid} className="hover:bg-gray-50">
+                                        {categories.map((category) => (
+                                            <tr key={category.uuid} className="hover:bg-gray-50">
                                                 <td className="px-4 py-3 whitespace-nowrap">
                                                     <img
-                                                        src={getImageUrl(product)}
-                                                        alt={product.name}
+                                                        src={getImageUrl(category)}
+                                                        alt={category.name}
                                                         className="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded"
                                                         onError={(e) => {
                                                             e.target.src = '/images/placeholder.png';
@@ -223,42 +185,38 @@ export default function AdminProducts() {
                                                     />
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                                                    <div className="text-xs text-gray-500">SKU: {product.sku || 'N/A'}</div>
-                                                </td>
-                                                <td className="px-4 py-3 text-sm text-gray-500">
-                                                    {product.category?.name || 'N/A'}
-                                                </td>
-                                                <td className="px-4 py-3 text-sm text-gray-900">
-                                                    ${product.price}
-                                                    {product.sale_price && (
-                                                        <div className="text-xs text-red-600">Sale: ${product.sale_price}</div>
+                                                    <div className="text-sm font-medium text-gray-900">{category.name}</div>
+                                                    {category.description && (
+                                                        <div className="text-xs text-gray-500 mt-1 line-clamp-2">{category.description}</div>
                                                     )}
                                                 </td>
                                                 <td className="px-4 py-3 text-sm text-gray-500">
-                                                    {product.stock_quantity || 0}
+                                                    {category.slug}
+                                                </td>
+                                                <td className="px-4 py-3 text-sm text-gray-500">
+                                                    {category.products_count || 0}
+                                                </td>
+                                                <td className="px-4 py-3 text-sm text-gray-500">
+                                                    {category.sort_order || 0}
                                                 </td>
                                                 <td className="px-4 py-3 whitespace-nowrap">
                                                     <span className={`px-2 py-1 text-xs rounded-full ${
-                                                        product.is_active 
+                                                        category.is_active 
                                                             ? 'bg-green-100 text-green-800' 
                                                             : 'bg-red-100 text-red-800'
                                                     }`}>
-                                                        {product.is_active ? 'Active' : 'Inactive'}
+                                                        {category.is_active ? 'Active' : 'Inactive'}
                                                     </span>
-                                                    {product.is_featured && (
-                                                        <div className="text-xs text-indigo-600 mt-1">Featured</div>
-                                                    )}
                                                 </td>
                                                 <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
                                                     <div className="flex justify-end gap-2">
-                                                        <Link href={`/admin/products/edit${tokenQuery ? tokenQuery + '&' : '?'}id=${product.uuid}`}>
+                                                        <Link href={`/admin/categories/edit${tokenQuery ? tokenQuery + '&' : '?'}id=${category.uuid}`}>
                                                             <Button variant="outline" size="sm">Edit</Button>
                                                         </Link>
                                                         <Button
                                                             variant="outline"
                                                             size="sm"
-                                                            onClick={() => handleDelete(product.uuid)}
+                                                            onClick={() => handleDelete(category.uuid)}
                                                             className="text-red-600 hover:bg-red-50"
                                                         >
                                                             Delete
@@ -278,7 +236,7 @@ export default function AdminProducts() {
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => loadProducts(pagination.current_page - 1)}
+                                    onClick={() => loadCategories(pagination.current_page - 1)}
                                     disabled={pagination.current_page === 1}
                                 >
                                     Previous
@@ -289,7 +247,7 @@ export default function AdminProducts() {
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => loadProducts(pagination.current_page + 1)}
+                                    onClick={() => loadCategories(pagination.current_page + 1)}
                                     disabled={pagination.current_page === pagination.last_page}
                                 >
                                     Next

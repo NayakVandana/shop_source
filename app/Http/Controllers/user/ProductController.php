@@ -13,7 +13,7 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         try {
-            $query = Product::with('category')->where('is_active', true);
+            $query = Product::with(['category', 'media'])->where('is_active', true);
 
             // Search
             if ($request->has('search')) {
@@ -64,15 +64,8 @@ class ProductController extends Controller
             $perPage = $request->get('per_page', 12);
             $products = $query->paginate($perPage);
 
-            // Add image URLs to each product
-            $products->getCollection()->transform(function ($product) {
-                $product->image_urls = $product->image_urls;
-                $product->primary_image_url = $product->primary_image_url;
-                $product->video_urls = $product->video_urls;
-                $product->primary_video_url = $product->primary_video_url;
-                
-                return $product;
-            });
+            // Media URLs are automatically available via model attributes
+            // No need to manually transform - they're accessed via accessors
 
             return $this->sendJsonResponse(true, 'Products retrieved successfully', $products);
         } catch (Exception $e) {
@@ -87,16 +80,13 @@ class ProductController extends Controller
                 'id' => 'required|string'
             ]);
 
-            $product = Product::with('category')
+            $product = Product::with(['category', 'media'])
                 ->where('is_active', true)
                 ->where('uuid', $data['id'])
                 ->firstOrFail();
             
-            // Add image URLs to response
-            $product->image_urls = $product->image_urls;
-            $product->primary_image_url = $product->primary_image_url;
-            $product->video_urls = $product->video_urls;
-            $product->primary_video_url = $product->primary_video_url;
+            // Media URLs are automatically available via model attributes
+            // image_urls, primary_image_url, video_urls, primary_video_url
             
             return $this->sendJsonResponse(true, 'Product retrieved successfully', $product);
         } catch (Exception $e) {
@@ -107,7 +97,7 @@ class ProductController extends Controller
     public function featured(Request $request)
     {
         try {
-            $products = Product::with('category')
+            $products = Product::with(['category', 'media'])
                 ->where('is_active', true)
                 ->where('is_featured', true)
                 ->orderBy('created_at', 'desc')
@@ -129,7 +119,7 @@ class ProductController extends Controller
 
             $product = Product::where('uuid', $data['id'])->firstOrFail();
             
-            $relatedProducts = Product::with('category')
+            $relatedProducts = Product::with(['category', 'media'])
                 ->where('is_active', true)
                 ->where('uuid', '!=', $data['id'])
                 ->where('category_id', $product->category_id)

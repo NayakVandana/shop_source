@@ -25,7 +25,14 @@ use Illuminate\Support\Facades\Route;
         Route::post('/products/update', [\App\Http\Controllers\admin\ProductController::class, 'update']);
         Route::post('/products/destroy', [\App\Http\Controllers\admin\ProductController::class, 'destroy']);
         
-        // Categories (for product form dropdowns)
+        // Categories
+        Route::post('/categories/index', [\App\Http\Controllers\admin\CategoryController::class, 'index']);
+        Route::post('/categories/store', [\App\Http\Controllers\admin\CategoryController::class, 'store']);
+        Route::post('/categories/show', [\App\Http\Controllers\admin\CategoryController::class, 'show']);
+        Route::post('/categories/update', [\App\Http\Controllers\admin\CategoryController::class, 'update']);
+        Route::post('/categories/destroy', [\App\Http\Controllers\admin\CategoryController::class, 'destroy']);
+        
+        // Categories (for product form dropdowns - keep for backward compatibility)
         Route::post('/categories/list', [\App\Http\Controllers\Api\CategoryController::class, 'index']);
         
     });

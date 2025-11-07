@@ -35,6 +35,8 @@ export default function ProductForm() {
     
     const [imagePreview, setImagePreview] = useState(null);
     const [imagesPreview, setImagesPreview] = useState([]);
+    const [videoPreview, setVideoPreview] = useState(null);
+    const [videosPreview, setVideosPreview] = useState([]);
     
     const isEdit = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('id');
     const productId = typeof window !== 'undefined' 
@@ -87,7 +89,24 @@ export default function ProductForm() {
                     dimensions: product.dimensions || '',
                 });
                 
-                if (product.images && product.images.length > 0) {
+                // Load existing images
+                if (product.media) {
+                    const images = product.media.filter(m => m.type === 'image');
+                    const videos = product.media.filter(m => m.type === 'video');
+                    
+                    if (images.length > 0) {
+                        const imagePreviews = images.map(img => img.url || (img.file_path.startsWith('http') ? img.file_path : `/storage/${img.file_path}`));
+                        setImagesPreview(imagePreviews);
+                        setImagePreview(imagePreviews[0]);
+                    }
+                    
+                    if (videos.length > 0) {
+                        const videoPreviews = videos.map(vid => vid.url || (vid.file_path.startsWith('http') ? vid.file_path : `/storage/${vid.file_path}`));
+                        setVideosPreview(videoPreviews);
+                        setVideoPreview(videoPreviews[0]);
+                    }
+                } else if (product.images && product.images.length > 0) {
+                    // Fallback for legacy format
                     const previews = product.images.map(img => 
                         img.startsWith('http') ? img : `/storage/${img}`
                     );
@@ -183,6 +202,67 @@ export default function ProductForm() {
         const previews = imageFiles.map(f => URL.createObjectURL(f));
         setImagesPreview(previews);
         setFormData(prev => ({ ...prev, images: imageFiles }));
+    };
+
+    const handleVideoChange = (e) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            // Validate file type
+            const validVideoTypes = ['video/mp4', 'video/avi', 'video/quicktime', 'video/x-msvideo', 'video/x-ms-wmv', 'video/x-flv', 'video/webm'];
+            if (!validVideoTypes.includes(file.type) && !file.name.match(/\.(mp4|avi|mov|wmv|flv|webm)$/i)) {
+                setErrors(prev => ({ ...prev, video: 'Please select a valid video file (MP4, AVI, MOV, WMV, FLV, or WEBM)' }));
+                return;
+            }
+            // Validate file size (10MB max)
+            if (file.size > 10 * 1024 * 1024) {
+                setErrors(prev => ({ ...prev, video: 'Video size must be less than 10MB' }));
+                return;
+            }
+            // Clear error if validation passes
+            if (errors.video) {
+                setErrors(prev => {
+                    const newErrors = { ...prev };
+                    delete newErrors.video;
+                    return newErrors;
+                });
+            }
+            setVideoPreview(URL.createObjectURL(file));
+            setFormData(prev => ({ ...prev, video: file }));
+        }
+    };
+
+    const handleVideosChange = (e) => {
+        const files = Array.from(e.target.files || []);
+        const validVideoTypes = ['video/mp4', 'video/avi', 'video/quicktime', 'video/x-msvideo', 'video/x-ms-wmv', 'video/x-flv', 'video/webm'];
+        const videoFiles = files.filter(f => 
+            validVideoTypes.includes(f.type) || f.name.match(/\.(mp4|avi|mov|wmv|flv|webm)$/i)
+        );
+        
+        // Validate all files are videos
+        if (videoFiles.length !== files.length) {
+            setErrors(prev => ({ ...prev, videos: 'Please select only valid video files (MP4, AVI, MOV, WMV, FLV, or WEBM)' }));
+            return;
+        }
+        
+        // Validate file sizes (10MB max per file)
+        const oversizedFiles = videoFiles.filter(f => f.size > 10 * 1024 * 1024);
+        if (oversizedFiles.length > 0) {
+            setErrors(prev => ({ ...prev, videos: 'All videos must be less than 10MB each' }));
+            return;
+        }
+        
+        // Clear error if validation passes
+        if (errors.videos) {
+            setErrors(prev => {
+                const newErrors = { ...prev };
+                delete newErrors.videos;
+                return newErrors;
+            });
+        }
+        
+        const previews = videoFiles.map(f => URL.createObjectURL(f));
+        setVideosPreview(previews);
+        setFormData(prev => ({ ...prev, videos: videoFiles }));
     };
 
     const validateForm = () => {
@@ -283,6 +363,12 @@ export default function ProductForm() {
             }
             if (formData.images && formData.images.length > 0) {
                 formData.images.forEach(img => formDataToSend.append('images[]', img));
+            }
+            if (formData.video) {
+                formDataToSend.append('video', formData.video);
+            }
+            if (formData.videos && formData.videos.length > 0) {
+                formData.videos.forEach(vid => formDataToSend.append('videos[]', vid));
             }
 
             const url = isEdit 
@@ -517,6 +603,56 @@ export default function ProductForm() {
                                                         alt={`Preview ${idx + 1}`}
                                                         className="w-full h-24 object-cover rounded"
                                                     />
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </Card>
+
+                            {/* Videos */}
+                            <Card>
+                                <Heading level={2} className="mb-4">Videos</Heading>
+                                <div className="space-y-4">
+                                    <div>
+                                        <FormInput
+                                            type="file"
+                                            accept="video/mp4,video/avi,video/quicktime,video/x-msvideo,video/x-ms-wmv,video/x-flv,video/webm"
+                                            onChange={handleVideoChange}
+                                            title="Main Video"
+                                            error={errors.video}
+                                        />
+                                        {videoPreview && (
+                                            <video
+                                                src={videoPreview}
+                                                controls
+                                                className="mt-2 w-full h-32 object-cover rounded"
+                                            >
+                                                Your browser does not support the video tag.
+                                            </video>
+                                        )}
+                                    </div>
+
+                                    <div>
+                                        <FormInput
+                                            type="file"
+                                            accept="video/mp4,video/avi,video/quicktime,video/x-msvideo,video/x-ms-wmv,video/x-flv,video/webm"
+                                            multiple
+                                            onChange={handleVideosChange}
+                                            title="Additional Videos"
+                                            error={errors.videos}
+                                        />
+                                        {videosPreview.length > 0 && (
+                                            <div className="mt-2 grid grid-cols-1 gap-2">
+                                                {videosPreview.map((preview, idx) => (
+                                                    <video
+                                                        key={idx}
+                                                        src={preview}
+                                                        controls
+                                                        className="w-full h-24 object-cover rounded"
+                                                    >
+                                                        Your browser does not support the video tag.
+                                                    </video>
                                                 ))}
                                             </div>
                                         )}

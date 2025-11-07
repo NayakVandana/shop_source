@@ -59,6 +59,19 @@ Route::get('/admin/products/edit', function () {
     return Inertia::render('admin/products/ProductForm');
 })->name('admin.products.edit');
 
+// Admin Categories (Protected)
+Route::get('/admin/categories', function () {
+    return Inertia::render('admin/categories/Categories');
+})->name('admin.categories');
+
+Route::get('/admin/categories/create', function () {
+    return Inertia::render('admin/categories/CategoryForm');
+})->name('admin.categories.create');
+
+Route::get('/admin/categories/edit', function () {
+    return Inertia::render('admin/categories/CategoryForm');
+})->name('admin.categories.edit');
+
 // Fallback: render Inertia 404 page for any unknown web route
 Route::fallback(function () {
     return Inertia::render('errors/PageNotFound')->toResponse(request())->setStatusCode(404);

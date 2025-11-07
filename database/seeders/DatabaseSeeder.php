@@ -2,40 +2,29 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
     /**
      * Seed the application's database.
+     * 
+     * This seeder calls all default data seeders in the correct order.
+     * Run with: php artisan db:seed
+     * Or fresh migration with seed: php artisan migrate:fresh --seed
      */
     public function run(): void
     {
-        // Create a test user
-        User::create([
-            'uuid' => \Illuminate\Support\Str::uuid(),
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-            'password' => bcrypt('password'),
-            'role' => 'user',
-            'is_registered' => true,
-            'is_active' => true,
+        $this->command->info('Starting database seeding...');
+        
+        // Seed in order: Users -> Categories -> Products
+        // Users can be seeded first as they don't depend on other tables
+        $this->call([
+            DefaultUsersSeeder::class,
+            DefaultCategoriesSeeder::class,
+            DefaultProductsSeeder::class,
         ]);
-
-        // Create an admin user
-        User::create([
-            'uuid' => \Illuminate\Support\Str::uuid(),
-            'name' => 'Admin User',
-            'email' => 'admin@example.com',
-            'password' => bcrypt('password'),
-            'role' => 'admin',
-            'is_registered' => true,
-            'is_active' => true,
-            'is_admin' => true,
-        ]);
+        
+        $this->command->info('Database seeding completed successfully!');
     }
 }

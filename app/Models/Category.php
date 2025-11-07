@@ -9,7 +9,7 @@ use Illuminate\Support\Str;
 class Category extends Model
 {
     protected $fillable = [
-        'name', 'slug', 'description', 'image', 'is_active', 'sort_order', 'uuid'
+        'name', 'slug', 'description', 'image', 'video', 'is_active', 'sort_order', 'uuid'
     ];
 
     protected $casts = [
