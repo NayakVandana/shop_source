@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\Category;
 use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use Exception;
@@ -16,7 +16,7 @@ class ProductController extends Controller
     /**
      * Display a listing of products
      */
-    public function index(Request $request): JsonResponse
+    public function index(Request $request): Response
     {
         try {
             $query = Product::with(['category', 'media']);
@@ -71,7 +71,7 @@ class ProductController extends Controller
     /**
      * Store a newly created product
      */
-    public function store(Request $request): JsonResponse
+    public function store(Request $request): Response
     {
         try {
             $validator = Validator::make($request->all(), [
@@ -136,7 +136,7 @@ class ProductController extends Controller
     /**
      * Display the specified product
      */
-    public function show(Request $request): JsonResponse
+    public function show(Request $request): Response
     {
         try {
             $data = $request->validate([
@@ -155,7 +155,7 @@ class ProductController extends Controller
     /**
      * Update the specified product
      */
-    public function update(Request $request): JsonResponse
+    public function update(Request $request): Response
     {
         try {
             $data = $request->validate([
@@ -233,7 +233,7 @@ class ProductController extends Controller
     /**
      * Remove the specified product
      */
-    public function destroy(Request $request): JsonResponse
+    public function destroy(Request $request): Response
     {
         try {
             $data = $request->validate([

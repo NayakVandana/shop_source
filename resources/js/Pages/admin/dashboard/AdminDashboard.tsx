@@ -10,13 +10,21 @@ export default function AdminDashboard() {
     const [error, setError] = useState(null);
 
     useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token') || localStorage.getItem('admin_token') || '';
+        
         axios
-            .post('/api/admin/dashboard/stats', {})
+            .post('/api/admin/dashboard/stats', {}, {
+                headers: { AdminToken: token }
+            })
             .then((res) => {
-                if (res.data && (res.data.success || res.data.status)) {
+                if (res.data && res.data.status) {
                     setStats(res.data.data || {});
                 } else {
                     setStats({});
+                    if (res.data && res.data.message) {
+                        setError(res.data.message);
+                    }
                 }
             })
             .catch(() => setError('Failed to load admin stats'))

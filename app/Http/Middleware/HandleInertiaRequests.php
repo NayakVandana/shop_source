@@ -49,6 +49,7 @@ class HandleInertiaRequests extends Middleware
             // Share authenticated user data
             'auth' => [
                 'user' => $user ? [
+                    'id' => $user->id,
                     'uuid' => $user->uuid,
                     'name' => $user->name,
                     'email' => $user->email,

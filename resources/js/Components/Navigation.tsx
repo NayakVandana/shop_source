@@ -89,6 +89,47 @@ export default function Navigation({ user }) {
         } catch (_) {}
     }, []);
 
+    // Handle admin panel click - auto-login if no token
+    const handleAdminPanelClick = async (e) => {
+        e.preventDefault();
+        
+        let adminToken = localStorage.getItem('admin_token');
+        
+        // If no token and user is admin, auto-login
+        if (!adminToken && isAdmin && user && user.id) {
+            try {
+                const response = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ user_id: user.id })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status && data.data && data.data.access_token) {
+                    adminToken = data.data.access_token;
+                    localStorage.setItem('admin_token', adminToken);
+                    window.location.href = `/admin/dashboard?token=${adminToken}`;
+                } else {
+                    console.error('Admin login failed:', data);
+                    window.location.href = '/admin/login';
+                }
+            } catch (error) {
+                console.error('Admin login error:', error);
+                window.location.href = '/admin/login';
+            }
+        } else if (adminToken) {
+            window.location.href = `/admin/dashboard?token=${adminToken}`;
+        } else {
+            window.location.href = '/admin/dashboard';
+        }
+    };
+
     // Optionally pass admin token in query if needed
     const adminToken = isAdmin ? localStorage.getItem('admin_token') : null;
     const adminPanelUrl = adminToken ? `/admin/dashboard?token=${adminToken}` : '/admin/dashboard';
@@ -173,12 +214,13 @@ export default function Navigation({ user }) {
 						{user && user.name ? (
 							<div className="flex items-center space-x-4">
 								{isAdmin && (
-									<Link
+									<a
 										href={adminPanelUrl}
+										onClick={handleAdminPanelClick}
 										className="text-primary-600 hover:text-primary-700 px-3 py-2 rounded-md text-sm font-medium border border-primary-600"
 									>
 										Admin Panel
-									</Link>
+									</a>
 								)}
 								<div className="flex items-center">
 									<div className="h-8 w-8 bg-primary-600 rounded-full flex items-center justify-center">
@@ -264,13 +306,16 @@ export default function Navigation({ user }) {
 					{user && user.name ? (
 						<div className="pt-2 border-t border-border-default">
 							{isAdmin && (
-								<Link
+								<a
 									href={adminPanelUrl}
+									onClick={(e) => {
+										setIsMobileOpen(false);
+										handleAdminPanelClick(e);
+									}}
 									className="block text-primary-600 hover:text-primary-700 hover:bg-primary-50 active:bg-primary-100 px-3 py-3 rounded-md text-base font-medium border border-primary-600 touch-manipulation min-h-[44px] flex items-center mb-2"
-									onClick={() => setIsMobileOpen(false)}
 								>
 									Admin Panel
-								</Link>
+								</a>
 							)}
 							<div className="flex items-center px-3 py-3">
 								<div className="h-9 w-9 sm:h-10 sm:w-10 bg-primary-600 rounded-full flex items-center justify-center flex-shrink-0">

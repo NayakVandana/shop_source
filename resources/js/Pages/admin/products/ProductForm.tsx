@@ -56,7 +56,7 @@ export default function ProductForm() {
             const res = await axios.post('/api/admin/categories/list', { per_page: 100 }, {
                 headers: { AdminToken: token }
             });
-            if (res.data && res.data.success) {
+            if (res.data && res.data.status) {
                 setCategories(res.data.data?.data || res.data.data || []);
             }
         } catch (err) {
@@ -71,7 +71,7 @@ export default function ProductForm() {
             const res = await axios.post('/api/admin/products/show', { id }, {
                 headers: { AdminToken: token }
             });
-            if (res.data && res.data.success) {
+            if (res.data && res.data.status) {
                 const product = res.data.data;
                 setFormData({
                     name: product.name || '',
@@ -386,12 +386,15 @@ export default function ProductForm() {
                 }
             });
 
-            if (res.data && res.data.success) {
+            if (res.data && res.data.status) {
                 const tokenQuery = token ? `?token=${token}` : '';
                 router.visit(`/admin/products${tokenQuery}`);
             } else {
                 const errorData = res.data?.data?.errors || {};
                 setErrors(errorData);
+                if (res.data?.message) {
+                    setErrors({ ...errorData, _general: res.data.message });
+                }
                 setGeneralError(res.data?.message || 'Please fix the errors below and try again.');
                 
                 // Scroll to first error

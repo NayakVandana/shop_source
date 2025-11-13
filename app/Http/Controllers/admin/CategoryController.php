@@ -5,7 +5,7 @@ namespace App\Http\Controllers\admin;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use Exception;
@@ -15,7 +15,7 @@ class CategoryController extends Controller
     /**
      * Display a listing of categories
      */
-    public function index(Request $request): JsonResponse
+    public function index(Request $request): Response
     {
         try {
             $query = Category::withCount('products');
@@ -51,7 +51,7 @@ class CategoryController extends Controller
     /**
      * Store a newly created category
      */
-    public function store(Request $request): JsonResponse
+    public function store(Request $request): Response
     {
         try {
             $validator = Validator::make($request->all(), [
@@ -99,7 +99,7 @@ class CategoryController extends Controller
     /**
      * Display the specified category
      */
-    public function show(Request $request): JsonResponse
+    public function show(Request $request): Response
     {
         try {
             $data = $request->validate([
@@ -118,7 +118,7 @@ class CategoryController extends Controller
     /**
      * Update the specified category
      */
-    public function update(Request $request): JsonResponse
+    public function update(Request $request): Response
     {
         try {
             $data = $request->validate([
@@ -182,7 +182,7 @@ class CategoryController extends Controller
     /**
      * Remove the specified category
      */
-    public function destroy(Request $request): JsonResponse
+    public function destroy(Request $request): Response
     {
         try {
             $data = $request->validate([

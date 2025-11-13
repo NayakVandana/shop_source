@@ -27,7 +27,7 @@ export default function AdminCategories() {
             const token = urlParams.get('token') || localStorage.getItem('admin_token') || '';
             
             const params: any = {
-                per_page: 15,
+                per_page: 10,
                 page,
             };
             if (search) params.search = search;
@@ -37,7 +37,7 @@ export default function AdminCategories() {
                 headers: { AdminToken: token }
             });
             
-            if (res.data && res.data.success) {
+            if (res.data && res.data.status) {
                 const data = res.data.data;
                 setCategories(Array.isArray(data?.data) ? data.data : []);
                 setPagination({
@@ -46,6 +46,9 @@ export default function AdminCategories() {
                 });
             } else {
                 setCategories([]);
+                if (res.data && res.data.message) {
+                    setError(res.data.message);
+                }
             }
         } catch (err) {
             setError('Failed to load categories');
@@ -70,7 +73,7 @@ export default function AdminCategories() {
                 headers: { AdminToken: token }
             });
             
-            if (res.data && res.data.success) {
+            if (res.data && res.data.status) {
                 loadCategories(pagination.current_page);
             } else {
                 alert(res.data?.message || 'Failed to delete category');
@@ -85,7 +88,7 @@ export default function AdminCategories() {
         if (category.image) {
             return category.image.startsWith('http') ? category.image : `/storage/${category.image}`;
         }
-        return '/images/placeholder.png';
+        return '/images/placeholder.svg';
     };
 
     const tokenParam = typeof window !== 'undefined' 
@@ -180,7 +183,7 @@ export default function AdminCategories() {
                                                         alt={category.name}
                                                         className="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded"
                                                         onError={(e) => {
-                                                            e.target.src = '/images/placeholder.png';
+                                                            e.target.src = '/images/placeholder.svg';
                                                         }}
                                                     />
                                                 </td>

@@ -30,7 +30,7 @@ export default function AdminProducts() {
             const res = await axios.post('/api/admin/categories/list', {}, {
                 headers: { AdminToken: token }
             });
-            if (res.data && res.data.success) {
+            if (res.data && res.data.status) {
                 setCategories(res.data.data?.data || res.data.data || []);
             }
         } catch (err) {
@@ -45,8 +45,10 @@ export default function AdminProducts() {
             const urlParams = new URLSearchParams(window.location.search);
             const token = urlParams.get('token') || localStorage.getItem('admin_token') || '';
             
+            console.log('Loading products with token:', token ? 'Token exists' : 'No token');
+            
             const params: any = {
-                per_page: 15,
+                per_page: 10,
                 page,
             };
             if (search) params.search = search;
@@ -54,10 +56,14 @@ export default function AdminProducts() {
             if (filterStatus !== '') params.is_active = filterStatus === 'active';
 
             const res = await axios.post('/api/admin/products/index', params, {
-                headers: { AdminToken: token }
+                headers: { 
+                    'AdminToken': token,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                }
             });
             
-            if (res.data && res.data.success) {
+            if (res.data && res.data.status) {
                 const data = res.data.data;
                 setProducts(Array.isArray(data?.data) ? data.data : []);
                 setPagination({
@@ -66,6 +72,9 @@ export default function AdminProducts() {
                 });
             } else {
                 setProducts([]);
+                if (res.data && res.data.message) {
+                    setError(res.data.message);
+                }
             }
         } catch (err) {
             setError('Failed to load products');
@@ -103,7 +112,7 @@ export default function AdminProducts() {
                 const url = imageMedia.url || (imageMedia.file_path?.startsWith('http') 
                     ? imageMedia.file_path 
                     : `/storage/${imageMedia.file_path}`);
-                return url || '/images/placeholder.png';
+                return url || '/images/placeholder.svg';
             }
         }
         // Fallback to legacy images array
@@ -111,7 +120,7 @@ export default function AdminProducts() {
             const img = product.images[0];
             return img.startsWith('http') ? img : `/storage/${img}`;
         }
-        return '/images/placeholder.png';
+        return '/images/placeholder.svg';
     };
 
     const tokenParam = typeof window !== 'undefined' 
@@ -218,7 +227,7 @@ export default function AdminProducts() {
                                                         alt={product.name}
                                                         className="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded"
                                                         onError={(e) => {
-                                                            e.target.src = '/images/placeholder.png';
+                                                            e.target.src = '/images/placeholder.svg';
                                                         }}
                                                     />
                                                 </td>
