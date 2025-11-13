@@ -72,6 +72,15 @@ Route::get('/admin/categories/edit', function () {
     return Inertia::render('admin/categories/CategoryForm');
 })->name('admin.categories.edit');
 
+// Admin Permissions (Protected)
+Route::get('/admin/permissions', function () {
+    return Inertia::render('admin/permissions/Permissions');
+})->name('admin.permissions');
+
+Route::get('/admin/permissions/bulk-create', function () {
+    return Inertia::render('admin/permissions/PermissionBulkForm');
+})->name('admin.permissions.bulk-create');
+
 // Fallback: render Inertia 404 page for any unknown web route
 Route::fallback(function () {
     return Inertia::render('errors/PageNotFound')->toResponse(request())->setStatusCode(404);
