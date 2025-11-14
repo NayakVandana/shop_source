@@ -102,7 +102,20 @@ class PermissionController extends Controller
             // Assign new roles
             foreach ($roles as $role) {
                 if (in_array($role, $validRoles)) {
-                    $permission->assignToRole($role);
+                    // Check if role assignment already exists
+                    $exists = DB::table('role_permissions')
+                        ->where('permission_id', $permission->id)
+                        ->where('role', $role)
+                        ->exists();
+                    
+                    if (!$exists) {
+                        DB::table('role_permissions')->insert([
+                            'permission_id' => $permission->id,
+                            'role' => $role,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                    }
                 }
             }
             
@@ -210,7 +223,20 @@ class PermissionController extends Controller
                         
                         foreach ($roles as $role) {
                             if (in_array($role, UserRole::values())) {
-                                $existing->assignToRole($role);
+                                // Check if role assignment already exists
+                                $exists = DB::table('role_permissions')
+                                    ->where('permission_id', $existing->id)
+                                    ->where('role', $role)
+                                    ->exists();
+                                
+                                if (!$exists) {
+                                    DB::table('role_permissions')->insert([
+                                        'permission_id' => $existing->id,
+                                        'role' => $role,
+                                        'created_at' => now(),
+                                        'updated_at' => now(),
+                                    ]);
+                                }
                             }
                         }
                     }
@@ -231,7 +257,20 @@ class PermissionController extends Controller
                     // Assign to roles if provided
                     foreach ($roles as $role) {
                         if (in_array($role, UserRole::values())) {
-                            $permission->assignToRole($role);
+                            // Check if role assignment already exists
+                            $exists = DB::table('role_permissions')
+                                ->where('permission_id', $permission->id)
+                                ->where('role', $role)
+                                ->exists();
+                            
+                            if (!$exists) {
+                                DB::table('role_permissions')->insert([
+                                    'permission_id' => $permission->id,
+                                    'role' => $role,
+                                    'created_at' => now(),
+                                    'updated_at' => now(),
+                                ]);
+                            }
                         }
                     }
 
