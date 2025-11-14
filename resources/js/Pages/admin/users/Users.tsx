@@ -15,7 +15,8 @@ export default function AdminUsers() {
     const [filterRole, setFilterRole] = useState('');
     const [filterAdmin, setFilterAdmin] = useState('');
     const [filterStatus, setFilterStatus] = useState('');
-    const [pagination, setPagination] = useState({ current_page: 1, last_page: 1 });
+    const [pagination, setPagination] = useState({ current_page: 1, last_page: 1, total: 0, per_page: 15 });
+    const [counts, setCounts] = useState({ total: 0, active: 0, inactive: 0, admin: 0, regular: 0 });
 
     useEffect(() => {
         loadUsers();
@@ -77,6 +78,16 @@ export default function AdminUsers() {
                     total: data?.total || 0,
                     per_page: data?.per_page || 15,
                 });
+                // Set counts from backend
+                if (data?.counts) {
+                    setCounts({
+                        total: data.counts.total || 0,
+                        active: data.counts.active || 0,
+                        inactive: data.counts.inactive || 0,
+                        admin: data.counts.admin || 0,
+                        regular: data.counts.regular || 0,
+                    });
+                }
                 setError(null);
             } else {
                 setUsers([]);
@@ -256,6 +267,54 @@ export default function AdminUsers() {
                     </Card>
                 ) : (
                     <>
+                        {/* Statistics Cards */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+                            <Card>
+                                <div className="p-4">
+                                    <Text className="text-sm text-gray-500 mb-1">Total Users</Text>
+                                    <Heading level={2} className="text-2xl font-bold text-gray-900">{counts.total || 0}</Heading>
+                                    <Text className="text-xs text-gray-500 mt-1">
+                                        {counts.total === 1 ? 'user' : 'users'} in total
+                                    </Text>
+                                </div>
+                            </Card>
+                            <Card className={counts.active > 0 ? 'border-l-4 border-green-500' : ''}>
+                                <div className="p-4">
+                                    <Text className="text-sm text-gray-500 mb-1">Active Users</Text>
+                                    <Heading level={2} className="text-2xl font-bold text-green-600">{counts.active || 0}</Heading>
+                                    <Text className="text-xs text-gray-500 mt-1">
+                                        {counts.inactive || 0} inactive
+                                    </Text>
+                                </div>
+                            </Card>
+                            <Card className={counts.inactive > 0 ? 'border-l-4 border-red-500' : ''}>
+                                <div className="p-4">
+                                    <Text className="text-sm text-gray-500 mb-1">Inactive Users</Text>
+                                    <Heading level={2} className="text-2xl font-bold text-red-600">{counts.inactive || 0}</Heading>
+                                    <Text className="text-xs text-gray-500 mt-1">
+                                        Users disabled
+                                    </Text>
+                                </div>
+                            </Card>
+                            <Card className={counts.admin > 0 ? 'border-l-4 border-purple-500' : ''}>
+                                <div className="p-4">
+                                    <Text className="text-sm text-gray-500 mb-1">Admin Users</Text>
+                                    <Heading level={2} className="text-2xl font-bold text-purple-600">{counts.admin || 0}</Heading>
+                                    <Text className="text-xs text-gray-500 mt-1">
+                                        {counts.regular || 0} regular users
+                                    </Text>
+                                </div>
+                            </Card>
+                            <Card>
+                                <div className="p-4">
+                                    <Text className="text-sm text-gray-500 mb-1">Regular Users</Text>
+                                    <Heading level={2} className="text-2xl font-bold text-gray-900">{counts.regular || 0}</Heading>
+                                    <Text className="text-xs text-gray-500 mt-1">
+                                        Non-admin users
+                                    </Text>
+                                </div>
+                            </Card>
+                        </div>
                         <Card padding="none" className="overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="min-w-full divide-y divide-gray-200">

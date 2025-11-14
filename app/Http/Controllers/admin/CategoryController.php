@@ -41,7 +41,34 @@ class CategoryController extends Controller
             $perPage = $request->get('per_page', 15);
             $categories = $query->paginate($perPage);
             
-            return $this->sendJsonResponse(true, 'Categories retrieved successfully', $categories);
+            // Get counts for filtered query (before pagination)
+            $countsQuery = Category::query();
+            
+            // Apply same filters as main query
+            if ($request->has('search')) {
+                $countsQuery->where('name', 'like', '%' . $request->search . '%')
+                      ->orWhere('description', 'like', '%' . $request->search . '%')
+                      ->orWhere('slug', 'like', '%' . $request->search . '%');
+            }
+            
+            if ($request->has('is_active')) {
+                $countsQuery->where('is_active', $request->is_active);
+            }
+            
+            // Get counts
+            $totalCount = $countsQuery->count();
+            $activeCount = (clone $countsQuery)->where('is_active', true)->count();
+            $inactiveCount = (clone $countsQuery)->where('is_active', false)->count();
+            
+            // Return response with counts in data
+            $responseData = $categories->toArray();
+            $responseData['counts'] = [
+                'total' => $totalCount,
+                'active' => $activeCount,
+                'inactive' => $inactiveCount,
+            ];
+            
+            return $this->sendJsonResponse(true, 'Categories retrieved successfully', $responseData);
             
         } catch (Exception $e) {
             return $this->sendError($e);

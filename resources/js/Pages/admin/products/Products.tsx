@@ -15,7 +15,8 @@ export default function AdminProducts() {
     const [filterCategory, setFilterCategory] = useState('');
     const [filterStatus, setFilterStatus] = useState('');
     const [categories, setCategories] = useState([]);
-    const [pagination, setPagination] = useState({ current_page: 1, last_page: 1 });
+    const [pagination, setPagination] = useState({ current_page: 1, last_page: 1, total: 0, per_page: 10 });
+    const [counts, setCounts] = useState({ total: 0, active: 0, inactive: 0, in_stock: 0, out_of_stock: 0 });
 
     useEffect(() => {
         loadCategories();
@@ -69,7 +70,19 @@ export default function AdminProducts() {
                 setPagination({
                     current_page: data?.current_page || 1,
                     last_page: data?.last_page || 1,
+                    total: data?.total || 0,
+                    per_page: data?.per_page || 10,
                 });
+                // Set counts from backend
+                if (data?.counts) {
+                    setCounts({
+                        total: data.counts.total || 0,
+                        active: data.counts.active || 0,
+                        inactive: data.counts.inactive || 0,
+                        in_stock: data.counts.in_stock || 0,
+                        out_of_stock: data.counts.out_of_stock || 0,
+                    });
+                }
             } else {
                 setProducts([]);
                 if (res.data && res.data.message) {
@@ -133,7 +146,22 @@ export default function AdminProducts() {
             <Head title="Admin - Products" />
             <div className="p-4 sm:p-6 lg:p-8">
                 <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <Heading level={1}>Products Management</Heading>
+                    <div>
+                        <Heading level={1}>Products Management</Heading>
+                        {!loading && (
+                            <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-gray-600">
+                                <Text className="text-sm text-gray-500">
+                                    <span className="font-medium text-gray-900">{counts.total || 0}</span> total
+                                </Text>
+                                <Text className="text-sm text-gray-500">
+                                    <span className="font-medium text-green-600">{counts.active || 0}</span> active, <span className="font-medium text-gray-600">{counts.inactive || 0}</span> inactive
+                                </Text>
+                                <Text className="text-sm text-gray-500">
+                                    <span className="font-medium text-blue-600">{counts.in_stock || 0}</span> in stock, <span className="font-medium text-red-600">{counts.out_of_stock || 0}</span> out of stock
+                                </Text>
+                            </div>
+                        )}
+                    </div>
                     <Link href={`/admin/products/create${tokenQuery}`}>
                         <Button>Add New Product</Button>
                     </Link>
@@ -200,10 +228,52 @@ export default function AdminProducts() {
                     <Card>
                         <div className="text-center py-12">
                             <Text muted>No products found</Text>
+                            {pagination.total === 0 && (
+                                <Text className="text-sm text-gray-500 mt-2">Total: 0 products</Text>
+                            )}
                         </div>
                     </Card>
                 ) : (
                     <>
+                        {/* Statistics Cards */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                            <Card>
+                                <div className="p-4">
+                                    <Text className="text-sm text-gray-500 mb-1">Total Products</Text>
+                                    <Heading level={2} className="text-2xl font-bold text-gray-900">{counts.total || 0}</Heading>
+                                    <Text className="text-xs text-gray-500 mt-1">
+                                        {counts.total === 1 ? 'product' : 'products'} in total
+                                    </Text>
+                                </div>
+                            </Card>
+                            <Card className={counts.active > 0 ? 'border-l-4 border-green-500' : ''}>
+                                <div className="p-4">
+                                    <Text className="text-sm text-gray-500 mb-1">Active Products</Text>
+                                    <Heading level={2} className="text-2xl font-bold text-green-600">{counts.active || 0}</Heading>
+                                    <Text className="text-xs text-gray-500 mt-1">
+                                        {counts.inactive || 0} inactive
+                                    </Text>
+                                </div>
+                            </Card>
+                            <Card className={counts.in_stock > 0 ? 'border-l-4 border-blue-500' : ''}>
+                                <div className="p-4">
+                                    <Text className="text-sm text-gray-500 mb-1">In Stock</Text>
+                                    <Heading level={2} className="text-2xl font-bold text-blue-600">{counts.in_stock || 0}</Heading>
+                                    <Text className="text-xs text-gray-500 mt-1">
+                                        Products available
+                                    </Text>
+                                </div>
+                            </Card>
+                            <Card className={counts.out_of_stock > 0 ? 'border-l-4 border-red-500' : ''}>
+                                <div className="p-4">
+                                    <Text className="text-sm text-gray-500 mb-1">Out of Stock</Text>
+                                    <Heading level={2} className="text-2xl font-bold text-red-600">{counts.out_of_stock || 0}</Heading>
+                                    <Text className="text-xs text-red-600 mt-1">
+                                        {counts.out_of_stock > 0 ? 'Needs restocking' : 'All in stock'}
+                                    </Text>
+                                </div>
+                            </Card>
+                        </div>
                         <Card padding="none" className="overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="min-w-full divide-y divide-gray-200">

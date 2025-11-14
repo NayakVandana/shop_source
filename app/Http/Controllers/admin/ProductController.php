@@ -61,7 +61,80 @@ class ProductController extends Controller
             $perPage = $request->get('per_page', 15);
             $products = $query->paginate($perPage);
             
-            return $this->sendJsonResponse(true, 'Products retrieved successfully', $products);
+            // Get counts for filtered query (before pagination)
+            $countsQuery = Product::query();
+            
+            // Apply same filters as main query
+            if ($request->has('search')) {
+                $countsQuery->where('name', 'like', '%' . $request->search . '%')
+                      ->orWhere('description', 'like', '%' . $request->search . '%')
+                      ->orWhere('sku', 'like', '%' . $request->search . '%');
+            }
+            
+            if ($request->has('category_id')) {
+                $countsQuery->where('category_id', $request->category_id);
+            }
+            
+            if ($request->has('is_active')) {
+                $countsQuery->where('is_active', $request->is_active);
+            }
+            
+            if ($request->has('is_featured')) {
+                $countsQuery->where('is_featured', $request->is_featured);
+            }
+            
+            if ($request->has('min_price')) {
+                $countsQuery->where('price', '>=', $request->min_price);
+            }
+            
+            if ($request->has('max_price')) {
+                $countsQuery->where('price', '<=', $request->max_price);
+            }
+            
+            // Get counts
+            $totalCount = $countsQuery->count();
+            $activeCount = (clone $countsQuery)->where('is_active', true)->count();
+            $inactiveCount = (clone $countsQuery)->where('is_active', false)->count();
+            $inStockCount = (clone $countsQuery)->where(function($q) {
+                $q->where(function($q2) {
+                    $q2->where('manage_stock', false)
+                       ->orWhere(function($q3) {
+                           $q3->where('manage_stock', true)
+                              ->where('in_stock', true)
+                              ->where('stock_quantity', '>', 0);
+                       });
+                });
+            })->count();
+            $outOfStockCount = (clone $countsQuery)->where(function($q) {
+                $q->where('manage_stock', true)
+                  ->where(function($q2) {
+                      $q2->where('in_stock', false)
+                         ->orWhere('stock_quantity', '<=', 0);
+                  });
+            })->count();
+            
+            // Add counts to pagination response
+            $products->appends([
+                'counts' => [
+                    'total' => $totalCount,
+                    'active' => $activeCount,
+                    'inactive' => $inactiveCount,
+                    'in_stock' => $inStockCount,
+                    'out_of_stock' => $outOfStockCount,
+                ]
+            ]);
+            
+            // Return response with counts in data
+            $responseData = $products->toArray();
+            $responseData['counts'] = [
+                'total' => $totalCount,
+                'active' => $activeCount,
+                'inactive' => $inactiveCount,
+                'in_stock' => $inStockCount,
+                'out_of_stock' => $outOfStockCount,
+            ];
+            
+            return $this->sendJsonResponse(true, 'Products retrieved successfully', $responseData);
             
         } catch (Exception $e) {
             return $this->sendError($e);

@@ -85,13 +85,69 @@ class UserController extends Controller
             
             $users = $query->paginate($perPage, ['*'], 'page', $page);
             
+            // Get counts for filtered query (before pagination)
+            $countsQuery = User::query();
+            
+            // Apply same filters as main query
+            if ($request->filled('search')) {
+                $search = $request->input('search');
+                $countsQuery->where(function($q) use ($search) {
+                    $q->where('name', 'like', '%' . $search . '%')
+                      ->orWhere('email', 'like', '%' . $search . '%')
+                      ->orWhere('mobile', 'like', '%' . $search . '%');
+                });
+            }
+            
+            if ($request->filled('role')) {
+                $countsQuery->where('role', $request->input('role'));
+            }
+            
+            $allRequest = $request->all();
+            
+            if (array_key_exists('is_admin', $allRequest)) {
+                $isAdmin = $request->input('is_admin');
+                if (is_bool($isAdmin)) {
+                    $countsQuery->where('is_admin', $isAdmin);
+                } else {
+                    $isAdminBool = filter_var($isAdmin, FILTER_VALIDATE_BOOLEAN);
+                    $countsQuery->where('is_admin', $isAdminBool);
+                }
+            }
+            
+            if (array_key_exists('is_active', $allRequest)) {
+                $isActive = $request->input('is_active');
+                if (is_bool($isActive)) {
+                    $countsQuery->where('is_active', $isActive);
+                } else {
+                    $isActiveBool = filter_var($isActive, FILTER_VALIDATE_BOOLEAN);
+                    $countsQuery->where('is_active', $isActiveBool);
+                }
+            }
+            
+            // Get counts
+            $totalCount = $countsQuery->count();
+            $activeCount = (clone $countsQuery)->where('is_active', true)->count();
+            $inactiveCount = (clone $countsQuery)->where('is_active', false)->count();
+            $adminCount = (clone $countsQuery)->where('is_admin', true)->count();
+            $regularUserCount = (clone $countsQuery)->where('is_admin', false)->count();
+            
             // Remove sensitive data from response
             $users->getCollection()->transform(function ($user) {
                 unset($user->password);
                 return $user;
             });
             
-            return $this->sendJsonResponse(true, 'Users retrieved successfully', $users);
+            // Return response with counts in data
+            $responseData = $users->toArray();
+            $responseData['counts'] = [
+                'total' => $totalCount,
+                'active' => $activeCount,
+                'inactive' => $inactiveCount,
+                'admin' => $adminCount,
+                'regular' => $regularUserCount,
+            ];
+            
+            return $this->sendJsonResponse(true, 'Users retrieved successfully', $responseData);
             
         } catch (Exception $e) {
             \Log::error('UserController index error: ' . $e->getMessage(), [

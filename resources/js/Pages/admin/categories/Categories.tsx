@@ -13,7 +13,8 @@ export default function AdminCategories() {
     const [error, setError] = useState(null);
     const [search, setSearch] = useState('');
     const [filterStatus, setFilterStatus] = useState('');
-    const [pagination, setPagination] = useState({ current_page: 1, last_page: 1 });
+    const [pagination, setPagination] = useState({ current_page: 1, last_page: 1, total: 0, per_page: 10 });
+    const [counts, setCounts] = useState({ total: 0, active: 0, inactive: 0 });
 
     useEffect(() => {
         loadCategories();
@@ -43,7 +44,17 @@ export default function AdminCategories() {
                 setPagination({
                     current_page: data?.current_page || 1,
                     last_page: data?.last_page || 1,
+                    total: data?.total || 0,
+                    per_page: data?.per_page || 10,
                 });
+                // Set counts from backend
+                if (data?.counts) {
+                    setCounts({
+                        total: data.counts.total || 0,
+                        active: data.counts.active || 0,
+                        inactive: data.counts.inactive || 0,
+                    });
+                }
             } else {
                 setCategories([]);
                 if (res.data && res.data.message) {
@@ -160,6 +171,36 @@ export default function AdminCategories() {
                     </Card>
                 ) : (
                     <>
+                        {/* Statistics Cards */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                            <Card>
+                                <div className="p-4">
+                                    <Text className="text-sm text-gray-500 mb-1">Total Categories</Text>
+                                    <Heading level={2} className="text-2xl font-bold text-gray-900">{counts.total || 0}</Heading>
+                                    <Text className="text-xs text-gray-500 mt-1">
+                                        {counts.total === 1 ? 'category' : 'categories'} in total
+                                    </Text>
+                                </div>
+                            </Card>
+                            <Card className={counts.active > 0 ? 'border-l-4 border-green-500' : ''}>
+                                <div className="p-4">
+                                    <Text className="text-sm text-gray-500 mb-1">Active Categories</Text>
+                                    <Heading level={2} className="text-2xl font-bold text-green-600">{counts.active || 0}</Heading>
+                                    <Text className="text-xs text-gray-500 mt-1">
+                                        {counts.inactive || 0} inactive
+                                    </Text>
+                                </div>
+                            </Card>
+                            <Card className={counts.inactive > 0 ? 'border-l-4 border-red-500' : ''}>
+                                <div className="p-4">
+                                    <Text className="text-sm text-gray-500 mb-1">Inactive Categories</Text>
+                                    <Heading level={2} className="text-2xl font-bold text-red-600">{counts.inactive || 0}</Heading>
+                                    <Text className="text-xs text-gray-500 mt-1">
+                                        Categories disabled
+                                    </Text>
+                                </div>
+                            </Card>
+                        </div>
                         <Card padding="none" className="overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="min-w-full divide-y divide-gray-200">
