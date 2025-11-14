@@ -17,12 +17,10 @@ class DatabaseSeeder extends Seeder
     {
         $this->command->info('Starting database seeding...');
         
-        // Seed in order: Users -> Permissions -> Categories -> Products
+        // Seed in order: Users -> Categories -> Products
         // Users can be seeded first as they don't depend on other tables
-        // Permissions should be seeded after users to assign to roles
         $this->call([
             DefaultUsersSeeder::class,
-            DefaultPermissionsSeeder::class,
             DefaultCategoriesSeeder::class,
             DefaultProductsSeeder::class,
         ]);

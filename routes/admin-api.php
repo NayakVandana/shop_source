@@ -35,13 +35,12 @@ use Illuminate\Support\Facades\Route;
         // Categories (for product form dropdowns - keep for backward compatibility)
         Route::post('/categories/list', [\App\Http\Controllers\Api\CategoryController::class, 'index']);
         
-        // Permissions
-        Route::post('/permissions/destroy', [\App\Http\Controllers\admin\PermissionController::class, 'destroy']);
+        // Permissions - All operations save to user_permissions table
         Route::post('/permissions/roles', [\App\Http\Controllers\admin\PermissionController::class, 'roles']);
-        Route::post('/permissions/modules', [\App\Http\Controllers\admin\PermissionController::class, 'modules']);
         Route::post('/permissions/grouped-by-role', [\App\Http\Controllers\admin\PermissionController::class, 'groupedByRole']);
         Route::post('/permissions/bulk-create', [\App\Http\Controllers\admin\PermissionController::class, 'createBulk']);
         Route::post('/permissions/update-roles', [\App\Http\Controllers\admin\PermissionController::class, 'updateRoles']);
+        Route::post('/permissions/destroy', [\App\Http\Controllers\admin\PermissionController::class, 'destroy']);
         
     });
 

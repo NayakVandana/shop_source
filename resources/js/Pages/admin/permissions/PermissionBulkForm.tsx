@@ -6,13 +6,14 @@ import AdminLayout from '../../../Layouts/AdminLayout';
 import Card from '../../../Components/ui/Card';
 import Button from '../../../Components/ui/Button';
 import { Heading, Text } from '../../../Components/ui/Typography';
+import { Modules } from './AdminPermission';
 
 export default function PermissionBulkForm() {
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState({});
     const [generalError, setGeneralError] = useState('');
     const [roles, setRoles] = useState([]);
-    const [modules, setModules] = useState([]);
+    const [modules] = useState(Object.keys(Modules));
     
     const [formData, setFormData] = useState({
         moduleActions: {}, // { module: [actions] }
@@ -21,22 +22,72 @@ export default function PermissionBulkForm() {
     const [selectedRoleFromUrl, setSelectedRoleFromUrl] = useState(null);
     const [existingPermissions, setExistingPermissions] = useState({}); // { module: [actions] }
 
-    // Standard actions available
-    const standardActions = [
-        { value: 'view', label: 'View' },
-        { value: 'create', label: 'Create' },
-        { value: 'update', label: 'Update' },
-        { value: 'delete', label: 'Delete' },
-        { value: 'manage', label: 'Manage' },
-        { value: 'statistics', label: 'Statistics' },
-    ];
+    const getToken = () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('token') || localStorage.getItem('admin_token') || '';
+    };
+
+    const loadRoles = async () => {
+        try {
+            const token = getToken();
+            const res = await axios.post('/api/admin/permissions/roles', {}, {
+                headers: { AdminToken: token }
+            });
+            if (res.data && res.data.status) {
+                const filteredRoles = (res.data.data || []).filter(role => role.value !== 'user');
+                return filteredRoles;
+            }
+            return [];
+        } catch (err) {
+            console.error('Failed to load roles', err);
+            return [];
+        }
+    };
+
+    const loadRoleWisePermissions = async () => {
+        try {
+            const token = getToken();
+            const res = await axios.post('/api/admin/permissions/grouped-by-role', {}, {
+                headers: { AdminToken: token }
+            });
+            if (res.data && res.data.status) {
+                return res.data.data || {};
+            }
+            return {};
+        } catch (err) {
+            console.error('Failed to load role-wise permissions', err);
+            return {};
+        }
+    };
+
+    const createBulkPermissions = async (data) => {
+        try {
+            const token = getToken();
+            const res = await axios.post('/api/admin/permissions/bulk-create', data, {
+                headers: { AdminToken: token }
+            });
+            return res.data;
+        } catch (err) {
+            console.error('Failed to create permissions', err);
+            throw err;
+        }
+    };
+
+    // Get available actions for a module from Modules constant
+    const getModuleActions = (module) => {
+        if (Modules[module]) {
+            return Object.entries(Modules[module]).map(([value, label]) => ({
+                value,
+                label
+            }));
+        }
+        return [];
+    };
 
     useEffect(() => {
         const initialize = async () => {
-            // Load modules first
-            await loadModules();
-            // Then load roles (which will trigger loading existing permissions if role param exists)
-            await loadRoles();
+            // Load roles (which will trigger loading existing permissions if role param exists)
+            await loadRolesData();
         };
         initialize();
     }, []);
@@ -59,32 +110,25 @@ export default function PermissionBulkForm() {
         }
     }, [selectedRoleFromUrl, modules]);
 
-    const loadRoles = async () => {
+    const loadRolesData = async () => {
         try {
-            const token = getToken();
-            const res = await axios.post('/api/admin/permissions/roles', {}, {
-                headers: { AdminToken: token }
-            });
-            if (res.data && res.data.status) {
-                // Filter out 'user' role - users don't manage permissions
-                const filteredRoles = (res.data.data || []).filter(role => role.value !== 'user');
-                setRoles(filteredRoles);
-                
-                // Check URL for role parameter and pre-select it
-                if (typeof window !== 'undefined') {
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const roleParam = urlParams.get('role');
-                    if (roleParam) {
-                        const roleExists = filteredRoles.find(r => r.value === roleParam);
-                        if (roleExists) {
-                            setSelectedRoleFromUrl(roleParam);
-                            setFormData(prev => ({
-                                ...prev,
-                                roles: [roleParam]
-                            }));
-                            // Existing permissions will be loaded via useEffect when modules are ready
-                        }
-                    }
+            const rolesData = await loadRoles();
+            // Filter out 'user' role - users don't manage permissions
+            const filteredRoles = rolesData.filter(role => role.value !== 'user');
+            setRoles(filteredRoles);
+            
+            // Check URL for role parameter and pre-select it
+            const urlParams = new URLSearchParams(window.location.search);
+            const roleParam = urlParams.get('role');
+            if (roleParam) {
+                const roleExists = filteredRoles.find(r => r.value === roleParam);
+                if (roleExists) {
+                    setSelectedRoleFromUrl(roleParam);
+                    setFormData(prev => ({
+                        ...prev,
+                        roles: [roleParam]
+                    }));
+                    // Existing permissions will be loaded via useEffect when modules are ready
                 }
             }
         } catch (err) {
@@ -92,74 +136,44 @@ export default function PermissionBulkForm() {
         }
     };
 
-    const loadExistingPermissionsForRole = async (role: string) => {
+    const loadExistingPermissionsForRole = async (role) => {
         try {
-            const token = getToken();
-            const res = await axios.post('/api/admin/permissions/grouped-by-role', {}, {
-                headers: { AdminToken: token }
-            });
+            const roleWisePermissions = await loadRoleWisePermissions();
+            const rolePermissions = roleWisePermissions[role] || [];
             
-            if (res.data && res.data.status) {
-                const rolePermissions = res.data.data[role] || [];
-                
-                // Group by module and collect actions
-                const moduleActionsMap = {};
-                rolePermissions.forEach(permission => {
-                    if (permission.module && permission.action) {
-                        // Only include modules that exist in the modules list
-                        if (modules.includes(permission.module)) {
-                            if (!moduleActionsMap[permission.module]) {
-                                moduleActionsMap[permission.module] = [];
-                            }
-                            if (!moduleActionsMap[permission.module].includes(permission.action)) {
-                                moduleActionsMap[permission.module].push(permission.action);
-                            }
+            // Group by module and collect actions
+            const moduleActionsMap = {};
+            rolePermissions.forEach(permission => {
+                if (permission.module && permission.action) {
+                    // Only include modules that exist in the Modules
+                    if (modules.includes(permission.module)) {
+                        if (!moduleActionsMap[permission.module]) {
+                            moduleActionsMap[permission.module] = [];
+                        }
+                        if (!moduleActionsMap[permission.module].includes(permission.action)) {
+                            moduleActionsMap[permission.module].push(permission.action);
                         }
                     }
-                });
-                
-                setExistingPermissions(moduleActionsMap);
-                
-                // Pre-check existing permissions in formData
-                // Merge with existing formData to preserve any manual selections
-                setFormData(prev => ({
-                    ...prev,
-                    moduleActions: {
-                        ...prev.moduleActions,
-                        ...moduleActionsMap
-                    }
-                }));
-            }
+                }
+            });
+            
+            setExistingPermissions(moduleActionsMap);
+            
+            // Pre-check existing permissions in formData
+            // Merge with existing formData to preserve any manual selections
+            setFormData(prev => ({
+                ...prev,
+                moduleActions: {
+                    ...prev.moduleActions,
+                    ...moduleActionsMap
+                }
+            }));
         } catch (err) {
             console.error('Failed to load existing permissions', err);
         }
     };
 
-    const loadModules = async () => {
-        try {
-            const token = getToken();
-            const res = await axios.post('/api/admin/permissions/modules', {}, {
-                headers: { AdminToken: token }
-            });
-            if (res.data && res.data.status) {
-                const modulesList = res.data.data || [];
-                setModules(modulesList);
-                return modulesList;
-            }
-            return [];
-        } catch (err) {
-            console.error('Failed to load modules', err);
-            return [];
-        }
-    };
-
-    const getToken = () => {
-        if (typeof window === 'undefined') return '';
-        const urlParams = new URLSearchParams(window.location.search);
-        return urlParams.get('token') || localStorage.getItem('admin_token') || '';
-    };
-
-    const handleModuleActionChange = (moduleValue: string, actionValue: string, checked: boolean) => {
+    const handleModuleActionChange = (moduleValue, actionValue, checked) => {
         setFormData(prev => {
             const moduleActions = { ...prev.moduleActions };
             if (!moduleActions[moduleValue]) {
@@ -183,11 +197,13 @@ export default function PermissionBulkForm() {
         });
     };
 
-    const handleSelectAllActionsForModule = (moduleValue: string, checked: boolean) => {
+    const handleSelectAllActionsForModule = (moduleValue, checked) => {
         setFormData(prev => {
             const moduleActions = { ...prev.moduleActions };
             if (checked) {
-                moduleActions[moduleValue] = standardActions.map(a => a.value);
+                // Use actions from Modules constant for this specific module
+                const moduleActionsList = getModuleActions(moduleValue);
+                moduleActions[moduleValue] = moduleActionsList.map(a => a.value);
             } else {
                 delete moduleActions[moduleValue];
             }
@@ -195,7 +211,7 @@ export default function PermissionBulkForm() {
         });
     };
 
-    const handleRoleChange = (roleValue: string, checked: boolean) => {
+    const handleRoleChange = (roleValue, checked) => {
         setFormData(prev => {
             const roles = prev.roles || [];
             if (checked) {
@@ -256,8 +272,6 @@ export default function PermissionBulkForm() {
         }
 
         try {
-            const token = getToken();
-            
             // Create permissions for each module with its specific actions
             const results = [];
             for (const [module, actions] of Object.entries(formData.moduleActions)) {
@@ -268,10 +282,8 @@ export default function PermissionBulkForm() {
                         roles: formData.roles,
                     };
 
-                    const res = await axios.post('/api/admin/permissions/bulk-create', data, {
-                        headers: { AdminToken: token }
-                    });
-                    results.push(res.data);
+                    const result = await createBulkPermissions(data);
+                    results.push(result);
                 }
             }
 
@@ -280,7 +292,7 @@ export default function PermissionBulkForm() {
             
             if (allSuccess) {
                 const totalCreated = results.reduce((sum, r) => sum + (r.data?.count || 0), 0);
-                const tokenQuery = token ? `?token=${token}` : '';
+                const tokenQuery = tokenParam ? `?token=${tokenParam}` : '';
                 router.visit(`/admin/permissions${tokenQuery}`);
             } else {
                 const errorData = results.find(r => r && !r.status)?.data?.errors || {};
@@ -348,7 +360,8 @@ export default function PermissionBulkForm() {
                                         {modules.map((module) => {
                                             const moduleActions = formData.moduleActions[module] || [];
                                             const existingModuleActions = existingPermissions[module] || [];
-                                            const allSelected = moduleActions.length === standardActions.length;
+                                            const availableActions = getModuleActions(module);
+                                            const allSelected = moduleActions.length === availableActions.length && availableActions.length > 0;
                                             const hasExisting = existingModuleActions.length > 0;
                                             
                                             return (
@@ -386,7 +399,7 @@ export default function PermissionBulkForm() {
                                                     {/* Actions Grid */}
                                                     <div className="bg-gray-50 p-4">
                                                         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                                                            {standardActions.map((action) => {
+                                                            {availableActions.map((action) => {
                                                                 const isChecked = moduleActions.includes(action.value);
                                                                 const isExisting = existingModuleActions.includes(action.value);
                                                                 

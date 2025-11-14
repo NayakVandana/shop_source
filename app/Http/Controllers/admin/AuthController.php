@@ -5,6 +5,7 @@ namespace App\Http\Controllers\admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\UserToken;
+use App\Http\Controllers\admin\PermissionController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -34,6 +35,37 @@ class AuthController extends Controller
             }
 
             $admin->access_token = $admin->createAdminToken();
+            
+            // Include permissions in response (as array of objects)
+            $admin->permissions = PermissionController::getUserPermissions($admin);
+            
+            // Group permissions by module
+            $permissions = PermissionController::getUserPermissions($admin);
+            $grouped = [];
+            foreach ($permissions as $perm) {
+                $module = '';
+                $action = '';
+                $permissionKey = '';
+                
+                if (is_string($perm)) {
+                    $permissionKey = $perm;
+                    $parts = explode(':', $permissionKey);
+                    $module = $parts[0] ?? '';
+                    $action = $parts[1] ?? '';
+                } elseif (is_array($perm) && isset($perm['permission'])) {
+                    $permissionKey = $perm['permission'];
+                    $module = $perm['module'] ?? '';
+                    $action = $perm['action'] ?? '';
+                }
+                
+                if ($module && $action) {
+                    if (!isset($grouped[$module])) {
+                        $grouped[$module] = [];
+                    }
+                    $grouped[$module][$action] = $permissionKey;
+                }
+            }
+            $admin->permissions_grouped = $grouped;
 
             // Placeholder: Dispatch AdminLogin event
             // AdminLogin::dispatch($admin);
