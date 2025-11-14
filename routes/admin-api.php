@@ -42,5 +42,11 @@ use Illuminate\Support\Facades\Route;
         Route::post('/permissions/update-roles', [\App\Http\Controllers\admin\PermissionController::class, 'updateRoles']);
         Route::post('/permissions/destroy', [\App\Http\Controllers\admin\PermissionController::class, 'destroy']);
         
+        // Users
+        Route::post('/users/index', [\App\Http\Controllers\admin\UserController::class, 'index']);
+        Route::post('/users/show', [\App\Http\Controllers\admin\UserController::class, 'show']);
+        Route::post('/users/update', [\App\Http\Controllers\admin\UserController::class, 'update']);
+        Route::post('/users/destroy', [\App\Http\Controllers\admin\UserController::class, 'destroy']);
+        
     });
 

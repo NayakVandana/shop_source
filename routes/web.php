@@ -81,6 +81,11 @@ Route::get('/admin/permissions/bulk-create', function () {
     return Inertia::render('admin/permissions/PermissionBulkForm');
 })->name('admin.permissions.bulk-create');
 
+// Admin Users (Protected)
+Route::get('/admin/users', function () {
+    return Inertia::render('admin/users/Users');
+})->name('admin.users');
+
 // Fallback: render Inertia 404 page for any unknown web route
 Route::fallback(function () {
     return Inertia::render('errors/PageNotFound')->toResponse(request())->setStatusCode(404);
