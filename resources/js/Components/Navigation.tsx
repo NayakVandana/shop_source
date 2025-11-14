@@ -55,36 +55,13 @@ export default function Navigation({ user }) {
 		return () => document.removeEventListener('mousedown', onClick);
 	}, [isMobileOpen]);
 
-    // Auto-logout admin when browsing non-admin (user/guest) pages
+    // Remove token from URL if present (but keep admin token in localStorage)
     useEffect(() => {
         try {
-            const isAdminPath = typeof window !== 'undefined' && window.location.pathname.startsWith('/admin');
-            if (isAdminPath) return;
-
-            const urlParams = new URLSearchParams(window.location.search);
-            const qpToken = urlParams.get('token');
-            const adminToken = localStorage.getItem('admin_token') || qpToken || '';
-
-            if (adminToken) {
-                fetch('/api/admin/logout', {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'AdminToken': adminToken,
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    credentials: 'include'
-                }).catch(() => {});
-
-                // Clear stored/admin URL token
-                localStorage.removeItem('admin_token');
-
-                // Remove token from URL without reload
-                try {
-                    const url = new URL(window.location.href);
-                    url.searchParams.delete('token');
-                    window.history.replaceState({}, '', url.toString());
-                } catch (_) {}
+            const url = new URL(window.location.href);
+            if (url.searchParams.has('token')) {
+                url.searchParams.delete('token');
+                window.history.replaceState({}, '', url.toString());
             }
         } catch (_) {}
     }, []);

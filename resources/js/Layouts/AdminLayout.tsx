@@ -127,44 +127,13 @@ export default function AdminLayout({ children, is404 = false }) {
                         )}
                         
                         {/* View Site - Always visible */}
-                        <button
-                            onClick={async () => {
-                                try {
-                                    const urlParams = new URLSearchParams(window.location.search);
-                                    const qpToken = urlParams.get('token');
-                                    const adminToken = localStorage.getItem('admin_token') || '';
-                                    const token = qpToken || adminToken || '';
-
-                                    if (token) {
-                                        await fetch('/api/admin/logout', {
-                                            method: 'POST',
-                                            headers: {
-                                                'Accept': 'application/json',
-                                                'AdminToken': token,
-                                                'X-Requested-With': 'XMLHttpRequest'
-                                            },
-                                            credentials: 'include'
-                                        }).catch(() => {});
-                                    }
-                                } catch (_) {}
-
-                                try {
-                                    localStorage.removeItem('admin_token');
-                                    document.cookie.split(';').forEach((c) => {
-                                        document.cookie = c
-                                            .replace(/^ +/, '')
-                                            .replace(/=.*/, `=;expires=${new Date(0).toUTCString()};path=/`);
-                                    });
-                                } catch (_) {}
-
-                                const url = new URL(window.location.href);
-                                window.location.href = `${url.origin}/`;
-                                setSidebarOpen(false);
-                            }}
-                            className="block w-full text-left px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors touch-manipulation min-h-[44px]"
+                        <Link
+                            href="/"
+                            onClick={() => setSidebarOpen(false)}
+                            className="block px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors touch-manipulation min-h-[44px] flex items-center"
                         >
                             View Site
-                        </button>
+                        </Link>
                     </nav>
 
                     {/* User Info */}
@@ -213,43 +182,12 @@ export default function AdminLayout({ children, is404 = false }) {
                         </button>
 
                         <div className="flex items-center space-x-2 sm:space-x-4 ml-auto">
-                            <button
-                                onClick={async () => {
-                                    try {
-                                        const urlParams = new URLSearchParams(window.location.search);
-                                        const qpToken = urlParams.get('token');
-                                        const adminToken = localStorage.getItem('admin_token') || '';
-                                        const token = qpToken || adminToken || '';
-
-                                        if (token) {
-                                            await fetch('/api/admin/logout', {
-                                                method: 'POST',
-                                                headers: {
-                                                    'Accept': 'application/json',
-                                                    'AdminToken': token,
-                                                    'X-Requested-With': 'XMLHttpRequest'
-                                                },
-                                                credentials: 'include'
-                                            }).catch(() => {});
-                                        }
-                                    } catch (_) {}
-
-                                    try {
-                                        localStorage.removeItem('admin_token');
-                                        document.cookie.split(';').forEach((c) => {
-                                            document.cookie = c
-                                                .replace(/^ +/, '')
-                                                .replace(/=.*/, `=;expires=${new Date(0).toUTCString()};path=/`);
-                                        });
-                                    } catch (_) {}
-
-                                    const url = new URL(window.location.href);
-                                    window.location.href = `${url.origin}/`;
-                                }}
-                                className="bg-indigo-600 text-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-md hover:bg-indigo-700 active:bg-indigo-800 text-xs sm:text-sm font-medium transition-colors touch-manipulation min-h-[36px] sm:min-h-[40px]"
+                            <Link
+                                href="/products"
+                                className="bg-indigo-600 text-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-md hover:bg-indigo-700 active:bg-indigo-800 text-xs sm:text-sm font-medium transition-colors touch-manipulation min-h-[36px] sm:min-h-[40px] flex items-center justify-center"
                             >
                                 User Panel
-                            </button>
+                            </Link>
                         </div>
                     </div>
                 </header>
