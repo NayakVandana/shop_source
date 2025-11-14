@@ -1,17 +1,26 @@
 // @ts-nocheck
 import React, { useEffect, useState } from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import axios from 'axios';
 import AdminLayout from '../../../Layouts/AdminLayout';
 import Card from '../../../Components/ui/Card';
 import Button from '../../../Components/ui/Button';
 import { Heading, Text } from '../../../Components/ui/Typography';
+import { hasPermission, canCreateModule, canDeleteModule, canUpdateModule } from './helpers/permissions';
 
 export default function AdminPermissions() {
+    const { auth } = usePage().props;
+    const user = auth.user;
     const [roleWisePermissions, setRoleWisePermissions] = useState({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [roles, setRoles] = useState([]);
+    
+    // Check permissions
+    const canView = hasPermission(user, 'permissions:view') || hasPermission(user, 'permissions:manage');
+    const canCreate = canCreateModule(user, 'permissions') || hasPermission(user, 'permissions:manage');
+    const canDelete = canDeleteModule(user, 'permissions') || hasPermission(user, 'permissions:manage');
+    const canUpdate = canUpdateModule(user, 'permissions') || hasPermission(user, 'permissions:manage');
 
     useEffect(() => {
         loadRoleWisePermissions();
@@ -60,12 +69,16 @@ export default function AdminPermissions() {
     };
 
     const getToken = () => {
-        if (typeof window === 'undefined') return '';
         const urlParams = new URLSearchParams(window.location.search);
         return urlParams.get('token') || localStorage.getItem('admin_token') || '';
     };
 
-    const handleDelete = async (id: string) => {
+    const handleDelete = async (id) => {
+        if (!canDelete) {
+            alert('You do not have permission to delete permissions');
+            return;
+        }
+        
         if (!confirm('Are you sure you want to delete this permission? This action cannot be undone.')) return;
         
         try {
@@ -86,7 +99,12 @@ export default function AdminPermissions() {
         }
     };
 
-    const handleRoleToggle = async (permissionId: number, role: string, checked: boolean) => {
+    const handleRoleToggle = async (permissionId, role, checked) => {
+        if (!canUpdate) {
+            alert('You do not have permission to update permissions');
+            return;
+        }
+        
         try {
             const token = getToken();
             
@@ -144,9 +162,11 @@ export default function AdminPermissions() {
             <div className="p-4 sm:p-6 lg:p-8">
                 <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <Heading level={1}>Permissions Management</Heading>
-                    <Link href={`/admin/permissions/bulk-create${tokenQuery}`}>
-                        <Button>Create by Module</Button>
-                    </Link>
+                    {canCreate && (
+                        <Link href={`/admin/permissions/bulk-create${tokenQuery}`}>
+                            <Button>Create by Module</Button>
+                        </Link>
+                    )}
                 </div>
 
                 {/* Permissions Display */}
@@ -183,9 +203,11 @@ export default function AdminPermissions() {
                                                 {rolePermissions.length} permission(s)
                                             </Text>
                                         </div>
-                                        <Link href={`/admin/permissions/bulk-create${tokenQuery}${tokenQuery ? '&' : '?'}role=${role}`}>
-                                            <Button size="sm" variant="outline">Add Permissions</Button>
-                                        </Link>
+                                        {canCreate && (
+                                            <Link href={`/admin/permissions/bulk-create${tokenQuery}${tokenQuery ? '&' : '?'}role=${role}`}>
+                                                <Button size="sm" variant="outline">Add Permissions</Button>
+                                            </Link>
+                                        )}
                                     </div>
                                     <div className="p-4">
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -203,17 +225,32 @@ export default function AdminPermissions() {
                                                                 </div>
                                                             )}
                                                         </div>
-                                                        <div className="flex gap-1 ml-2">
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={() => handleRoleToggle(permission.id, role, false)}
-                                                                className="text-red-600 hover:bg-red-50"
-                                                                title="Remove from this role"
-                                                            >
-                                                                Remove
-                                                            </Button>
-                                                        </div>
+                                                        {(canUpdate || canDelete) && (
+                                                            <div className="flex gap-1 ml-2">
+                                                                {canUpdate && (
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        onClick={() => handleRoleToggle(permission.id, role, false)}
+                                                                        className="text-red-600 hover:bg-red-50"
+                                                                        title="Remove from this role"
+                                                                    >
+                                                                        Remove
+                                                                    </Button>
+                                                                )}
+                                                                {canDelete && (
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        onClick={() => handleDelete(permission.id)}
+                                                                        className="text-red-600 hover:bg-red-50"
+                                                                        title="Delete permission"
+                                                                    >
+                                                                        Delete
+                                                                    </Button>
+                                                                )}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             ))}

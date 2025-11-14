@@ -43,6 +43,12 @@ class HandleInertiaRequests extends Middleware
             $user = $request->user();
         }
         
+        // Get user permissions if user exists and is admin
+        $permissions = [];
+        if ($user && ($user->is_admin || $user->role === 'admin' || $user->role === 'super_admin')) {
+            $permissions = \App\Http\Controllers\admin\PermissionController::getUserPermissionKeys($user);
+        }
+        
         return [
             ...parent::share($request),
             
@@ -55,6 +61,7 @@ class HandleInertiaRequests extends Middleware
                     'email' => $user->email,
                     'role' => $user->role,
                     'is_admin' => $user->is_admin ?? false,
+                    'permissions' => $permissions,
                 ] : null,
             ],
         ];

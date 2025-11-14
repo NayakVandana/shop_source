@@ -1,6 +1,7 @@
 // @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import { Link, usePage } from '@inertiajs/react';
+import { canViewModule, hasPermission } from '../Pages/admin/permissions/helpers/permissions';
 
 export default function AdminLayout({ children, is404 = false }) {
     const { auth } = usePage().props;
@@ -59,48 +60,73 @@ export default function AdminLayout({ children, is404 = false }) {
 
                     {/* Navigation */}
                     <nav className="flex-1 px-3 sm:px-4 py-4 sm:py-6 space-y-1 sm:space-y-2 overflow-y-auto">
-                        <Link
-                            href={`/admin/dashboard${tokenParam}`}
-                            className="block px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors touch-manipulation min-h-[44px] flex items-center"
-                            onClick={() => setSidebarOpen(false)}
-                        >
-                            Dashboard
-                        </Link>
-                        <Link
-                            href={`/admin/products${tokenParam}`}
-                            className="block px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors touch-manipulation min-h-[44px] flex items-center"
-                            onClick={() => setSidebarOpen(false)}
-                        >
-                            Products
-                        </Link>
-                        <Link
-                            href={`/admin/categories${tokenParam}`}
-                            className="block px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors touch-manipulation min-h-[44px] flex items-center"
-                            onClick={() => setSidebarOpen(false)}
-                        >
-                            Categories
-                        </Link>
-                        <Link
-                            href={`/admin/users${tokenParam}`}
-                            className="block px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors touch-manipulation min-h-[44px] flex items-center"
-                            onClick={() => setSidebarOpen(false)}
-                        >
-                            Users
-                        </Link>
-                        <Link
-                            href={`/admin/orders${tokenParam}`}
-                            className="block px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors touch-manipulation min-h-[44px] flex items-center"
-                            onClick={() => setSidebarOpen(false)}
-                        >
-                            Orders
-                        </Link>
-                        <Link
-                            href={`/admin/permissions${tokenParam}`}
-                            className="block px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors touch-manipulation min-h-[44px] flex items-center"
-                            onClick={() => setSidebarOpen(false)}
-                        >
-                            Permissions
-                        </Link>
+                        {/* Dashboard - Always visible for admins */}
+                        {canViewModule(user, 'dashboard') && (
+                            <Link
+                                href={`/admin/dashboard${tokenParam}`}
+                                className="block px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors touch-manipulation min-h-[44px] flex items-center"
+                                onClick={() => setSidebarOpen(false)}
+                            >
+                                Dashboard
+                            </Link>
+                        )}
+                        
+                        {/* Products - Check for products:view permission */}
+                        {canViewModule(user, 'products') && (
+                            <Link
+                                href={`/admin/products${tokenParam}`}
+                                className="block px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors touch-manipulation min-h-[44px] flex items-center"
+                                onClick={() => setSidebarOpen(false)}
+                            >
+                                Products
+                            </Link>
+                        )}
+                        
+                        {/* Categories - Check for categories:view permission */}
+                        {canViewModule(user, 'categories') && (
+                            <Link
+                                href={`/admin/categories${tokenParam}`}
+                                className="block px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors touch-manipulation min-h-[44px] flex items-center"
+                                onClick={() => setSidebarOpen(false)}
+                            >
+                                Categories
+                            </Link>
+                        )}
+                        
+                        {/* Users - Check for users:view permission */}
+                        {canViewModule(user, 'users') && (
+                            <Link
+                                href={`/admin/users${tokenParam}`}
+                                className="block px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors touch-manipulation min-h-[44px] flex items-center"
+                                onClick={() => setSidebarOpen(false)}
+                            >
+                                Users
+                            </Link>
+                        )}
+                        
+                        {/* Orders - Check for orders:view permission */}
+                        {canViewModule(user, 'orders') && (
+                            <Link
+                                href={`/admin/orders${tokenParam}`}
+                                className="block px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors touch-manipulation min-h-[44px] flex items-center"
+                                onClick={() => setSidebarOpen(false)}
+                            >
+                                Orders
+                            </Link>
+                        )}
+                        
+                        {/* Permissions - Check for permissions:view or permissions:manage permission */}
+                        {(hasPermission(user, 'permissions:view') || hasPermission(user, 'permissions:manage')) && (
+                            <Link
+                                href={`/admin/permissions${tokenParam}`}
+                                className="block px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors touch-manipulation min-h-[44px] flex items-center"
+                                onClick={() => setSidebarOpen(false)}
+                            >
+                                Permissions
+                            </Link>
+                        )}
+                        
+                        {/* View Site - Always visible */}
                         <button
                             onClick={async () => {
                                 try {
