@@ -207,6 +207,12 @@ class PermissionController extends Controller
                 'statistics' => 'Statistics',
             ];
 
+            // Ensure super_admin is always included in roles (super admin should have all permissions by default)
+            $superAdminRole = UserRole::SUPER_ADMIN->value;
+            if (!in_array($superAdminRole, $roles)) {
+                $roles[] = $superAdminRole;
+            }
+
             $createdPermissions = [];
             foreach ($actions as $action) {
                 // Check if permission already exists
@@ -215,12 +221,8 @@ class PermissionController extends Controller
                     ->first();
 
                 if ($existing) {
-                    // Update roles if provided
+                    // Add roles additively (don't remove existing role assignments, especially super_admin)
                     if (!empty($roles)) {
-                        DB::table('role_permissions')
-                            ->where('permission_id', $existing->id)
-                            ->delete();
-                        
                         foreach ($roles as $role) {
                             if (in_array($role, UserRole::values())) {
                                 // Check if role assignment already exists
@@ -254,7 +256,7 @@ class PermissionController extends Controller
                         'description' => "Can {$action} {$module}",
                     ]);
 
-                    // Assign to roles if provided
+                    // Assign to roles (super_admin is already included in the roles array)
                     foreach ($roles as $role) {
                         if (in_array($role, UserRole::values())) {
                             // Check if role assignment already exists

@@ -451,28 +451,44 @@ export default function PermissionBulkForm() {
                             <Card>
                                 <div className="flex items-center justify-between mb-4">
                                     <Heading level={2}>Assign to Roles</Heading>
-                                    <label className="flex items-center space-x-2 cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={formData.roles.length === roles.length && roles.length > 0}
-                                            onChange={(e) => handleSelectAllRoles(e.target.checked)}
-                                            className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                        />
-                                        <span className="text-xs text-gray-600">Select All</span>
-                                    </label>
-                                </div>
-                                <div className="space-y-3">
-                                    {roles.map((role) => (
-                                        <label key={role.value} className="flex items-center space-x-2 cursor-pointer">
+                                    {!selectedRoleFromUrl && (
+                                        <label className="flex items-center space-x-2 cursor-pointer">
                                             <input
                                                 type="checkbox"
-                                                checked={formData.roles?.includes(role.value) || false}
-                                                onChange={(e) => handleRoleChange(role.value, e.target.checked)}
+                                                checked={formData.roles.length === roles.length && roles.length > 0}
+                                                onChange={(e) => handleSelectAllRoles(e.target.checked)}
                                                 className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                                             />
-                                            <span className="text-sm text-gray-700">{role.label}</span>
+                                            <span className="text-xs text-gray-600">Select All</span>
                                         </label>
-                                    ))}
+                                    )}
+                                </div>
+                                <div className="space-y-3">
+                                    {(() => {
+                                        // If role is specified in URL, only show that role
+                                        const rolesToShow = selectedRoleFromUrl 
+                                            ? roles.filter(role => role.value === selectedRoleFromUrl)
+                                            : roles;
+                                        
+                                        return rolesToShow.map((role) => {
+                                            const isFromUrl = selectedRoleFromUrl === role.value;
+                                            return (
+                                                <label 
+                                                    key={role.value} 
+                                                    className={`flex items-center space-x-2 ${isFromUrl ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'}`}
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={formData.roles?.includes(role.value) || false}
+                                                        onChange={(e) => handleRoleChange(role.value, e.target.checked)}
+                                                        disabled={isFromUrl}
+                                                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    />
+                                                    <span className="text-sm text-gray-700">{role.label}</span>
+                                                </label>
+                                            );
+                                        });
+                                    })()}
                                     {roles.length === 0 && (
                                         <Text muted className="text-sm">No roles available</Text>
                                     )}
