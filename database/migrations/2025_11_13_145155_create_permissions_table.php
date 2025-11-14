@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('permissions', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('slug')->unique();
+            $table->string('slug', 191)->unique();
             $table->text('description')->nullable();
             $table->string('module')->nullable(); // e.g., 'products', 'categories', 'users'
             $table->string('action')->nullable(); // e.g., 'create', 'read', 'update', 'delete'
