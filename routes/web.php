@@ -31,10 +31,10 @@ Route::get('/register', function () {
     return Inertia::render('guest/auth/Register');
 })->name('register');
 
-// User Dashboard (Protected)
+// User Products - Redirect to products page
 Route::get('/dashboard', function () {
-    return Inertia::render('user/dashboard/Dashboard');
-})->name('dashboard');
+    return redirect('/products');
+})->name('user.products');
 
 // Admin Authentication (Guest)
 Route::get('/admin/login', function () {
