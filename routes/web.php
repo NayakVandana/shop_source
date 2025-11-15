@@ -26,6 +26,14 @@ Route::get('/cart', function () {
     return Inertia::render('guest/cart/Cart');
 })->name('cart');
 
+Route::get('/checkout', function () {
+    return Inertia::render('guest/checkout/Checkout');
+})->name('checkout');
+
+Route::get('/order-confirmation', function () {
+    return Inertia::render('guest/checkout/OrderConfirmation');
+})->name('order-confirmation');
+
 // Authentication Pages (Guest)
 Route::get('/login', function () {
     return Inertia::render('guest/auth/Login');

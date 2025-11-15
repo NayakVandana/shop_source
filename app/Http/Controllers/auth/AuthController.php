@@ -142,7 +142,19 @@ class AuthController extends Controller
             // Placeholder: Dispatch UserLoggedin event
             // UserLoggedin::dispatch($user);
 
-            return $this->sendJsonResponse(true, 'Login Successfully', $user, 200);
+            // Set auth_token cookie for persistent authentication
+            $response = $this->sendJsonResponse(true, 'Login Successfully', $user, 200);
+            if ($user->access_token) {
+                // Set cookie with proper configuration for Inertia requests
+                // httpOnly: false allows JS access
+                $isSecure = $request->secure() || $request->header('X-Forwarded-Proto') === 'https';
+                // Use cookie helper to create cookie with SameSite attribute
+                $cookie = cookie('auth_token', $user->access_token, 60 * 24 * 30, '/', null, $isSecure, false);
+                // Set SameSite attribute using withCookie method
+                $response->withCookie($cookie->withSameSite('lax'));
+            }
+
+            return $response;
         } catch (Exception $e) {
             return $this->sendError($e);
         }
@@ -173,7 +185,19 @@ class AuthController extends Controller
             $token = $user->createWebToken();
             $user->access_token = $token;
 
-            return $this->sendJsonResponse(true, 'Registered Successfully', $user, 201);
+            // Set auth_token cookie for persistent authentication
+            $response = $this->sendJsonResponse(true, 'Registered Successfully', $user, 201);
+            if ($user->access_token) {
+                // Set cookie with proper configuration for Inertia requests
+                // httpOnly: false allows JS access
+                $isSecure = $request->secure() || $request->header('X-Forwarded-Proto') === 'https';
+                // Use cookie helper to create cookie with SameSite attribute
+                $cookie = cookie('auth_token', $user->access_token, 60 * 24 * 30, '/', null, $isSecure, false);
+                // Set SameSite attribute using withCookie method
+                $response->withCookie($cookie->withSameSite('lax'));
+            }
+
+            return $response;
         } catch (Exception $e) {
             return $this->sendError($e);
         }
@@ -183,6 +207,65 @@ class AuthController extends Controller
     {
         try {
             $user = $request->user();
+
+            // Get session ID for cart preservation (before logout)
+            $sessionId = null;
+            if ($request->hasSession()) {
+                try {
+                    $sessionId = $request->session()->getId();
+                } catch (\Throwable $e) {}
+            }
+            if (!$sessionId) {
+                $sessionId = $request->cookie('cart_session_id');
+            }
+            if (!$sessionId) {
+                $sessionId = 'guest_' . uniqid() . '_' . time();
+            }
+
+            // Convert user cart to guest cart before logout to preserve cart items
+            if ($user) {
+                try {
+                    $userCart = \App\Models\Cart::with('items')->where('user_id', $user->id)->first();
+                    
+                    if ($userCart && $userCart->items && $userCart->items->isNotEmpty()) {
+                        // Check if there's already a guest cart with this session
+                        $guestCart = \App\Models\Cart::with('items')->where('session_id', $sessionId)
+                            ->whereNull('user_id')
+                            ->where('id', '!=', $userCart->id)
+                            ->first();
+
+                        if ($guestCart) {
+                            // Merge user cart items into existing guest cart
+                            foreach ($userCart->items as $userItem) {
+                                $existingItem = \App\Models\CartItem::where('cart_id', $guestCart->id)
+                                    ->where('product_id', $userItem->product_id)
+                                    ->first();
+
+                                if ($existingItem) {
+                                    $existingItem->update([
+                                        'quantity' => $existingItem->quantity + $userItem->quantity,
+                                        'price' => $userItem->price,
+                                        'discount_amount' => $userItem->discount_amount,
+                                    ]);
+                                    $userItem->delete();
+                                } else {
+                                    $userItem->update(['cart_id' => $guestCart->id]);
+                                }
+                            }
+                            $userCart->delete();
+                        } else {
+                            // Convert user cart to guest cart
+                            $userCart->update([
+                                'user_id' => null,
+                                'session_id' => $sessionId
+                            ]);
+                        }
+                    }
+                } catch (\Exception $e) {
+                    // Log error but don't fail logout
+                    \Log::error('Error converting cart on logout: ' . $e->getMessage());
+                }
+            }
 
             // Delete any stored access tokens
             if ($user) {
@@ -199,10 +282,16 @@ class AuthController extends Controller
             try { $request->session()->regenerateToken(); } catch (\Throwable $e) {}
 
             // Also explicitly forget possible cookies used by our app and the session cookie
+            // But preserve cart_session_id cookie
             $response = $this->sendJsonResponse(true, 'Logged out successfully', null, 200);
             $response->headers->clearCookie(config('session.cookie'));
             $response->headers->clearCookie('auth_token');
             $response->headers->clearCookie('admin_token');
+            
+            // Set cart_session_id cookie to preserve cart
+            if ($sessionId) {
+                $response->cookie('cart_session_id', $sessionId, 60 * 24 * 30, '/', null, false, false);
+            }
 
             return $response;
         } catch (Exception $e) {

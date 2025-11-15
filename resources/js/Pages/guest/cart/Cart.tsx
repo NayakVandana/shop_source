@@ -16,6 +16,17 @@ export default function Cart() {
     const [updating, setUpdating] = useState({});
     const [error, setError] = useState(null);
 
+    // Helper function to get checkout URL with token if available
+    const getCheckoutUrl = () => {
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token') || localStorage.getItem('auth_token') || '';
+            return token ? `/checkout?token=${token}` : '/checkout';
+        } catch (e) {
+            return '/checkout';
+        }
+    };
+
     // API config helper - works for both web and mobile
     const getApiConfig = (options = {}) => {
         const { token: providedToken = null, tokenType = 'user' } = options;
@@ -35,6 +46,23 @@ export default function Cart() {
                 const storageKey = tokenType === 'admin' ? 'admin_token' : 'auth_token';
                 try {
                     token = localStorage.getItem(storageKey) || null;
+                } catch (e) {
+                    token = null;
+                }
+            }
+            
+            // Finally try cookie (for persistent authentication)
+            if (!token) {
+                try {
+                    const cookieToken = document.cookie
+                        .split(';')
+                        .find(c => {
+                            const cookieName = tokenType === 'admin' ? 'admin_token' : 'auth_token';
+                            return c.trim().startsWith(`${cookieName}=`);
+                        });
+                    if (cookieToken) {
+                        token = cookieToken.split('=')[1]?.trim() || null;
+                    }
                 } catch (e) {
                     token = null;
                 }
@@ -416,9 +444,9 @@ export default function Cart() {
                                         <Button variant="outline" block>Continue Shopping</Button>
                                     </Link>
                                     {user ? (
-                                        <Button block disabled>
-                                            Proceed to Checkout
-                                        </Button>
+                                        <Link href={getCheckoutUrl()} className="block">
+                                            <Button block>Proceed to Checkout</Button>
+                                        </Link>
                                     ) : (
                                         <>
                                             <Link href={`/login?redirect=/cart`} className="block">
@@ -428,11 +456,6 @@ export default function Cart() {
                                                 Please login to proceed with checkout
                                             </Text>
                                         </>
-                                    )}
-                                    {user && (
-                                        <Text size="xs" className="text-gray-500 text-center block">
-                                            Checkout functionality coming soon
-                                        </Text>
                                     )}
                                 </div>
                             </Card>

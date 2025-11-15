@@ -79,6 +79,18 @@ class HandleInertiaRequests extends Middleware
               ?? $request->cookie('admin_token')
               ?? $request->header('AdminToken');
 
+        // Debug: Log if no token found (only in development)
+        if (!$token && app()->environment(['local', 'development'])) {
+            \Log::debug('HandleInertiaRequests: No token found', [
+                'bearerToken' => $request->bearerToken(),
+                'query_token' => $request->get('token'),
+                'cookie_auth_token' => $request->cookie('auth_token'),
+                'cookie_admin_token' => $request->cookie('admin_token'),
+                'header_AdminToken' => $request->header('AdminToken'),
+                'all_cookies' => $request->cookies->all(),
+            ]);
+        }
+
         if (!$token) {
             return null;
         }

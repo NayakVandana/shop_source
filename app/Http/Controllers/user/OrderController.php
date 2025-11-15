@@ -115,7 +115,20 @@ class OrderController extends Controller
 
                 // Create order
                 $user = $request->user();
-                $sessionId = $request->session()->getId();
+                $sessionId = null;
+                try {
+                    if ($request->hasSession()) {
+                        $sessionId = $request->session()->getId();
+                    }
+                } catch (\Exception $e) {
+                    // Session not available
+                }
+                if (!$sessionId) {
+                    $sessionId = $request->cookie('cart_session_id');
+                }
+                if (!$sessionId) {
+                    $sessionId = 'guest_' . uniqid() . '_' . time();
+                }
 
                 $order = Order::create([
                     'user_id' => $user ? $user->id : null,

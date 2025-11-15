@@ -9,6 +9,17 @@ export default function Navigation({ user }) {
     // Only allow admin view for admins
     const isAdmin = user && user.name && (user.is_admin === true || user.role === 'admin');
 
+    // Helper function to get cart URL with token if available
+    const getCartUrl = () => {
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token') || localStorage.getItem('auth_token') || '';
+            return token ? `/cart?token=${token}` : '/cart';
+        } catch (e) {
+            return '/cart';
+        }
+    };
+
 	// Mobile menu state
 	const [isMobileOpen, setIsMobileOpen] = useState(false);
 	const mobileMenuRef = useRef(null);
@@ -20,16 +31,46 @@ export default function Navigation({ user }) {
         }
     }, [isAdmin]);
 
-    // Always strip token from URL after initial render to avoid lingering re-auth
+    // Always strip token from URL after ensuring user is authenticated (to avoid lingering re-auth)
+    // But only remove it when user is confirmed authenticated and not during navigation
     useEffect(() => {
         try {
             const url = new URL(window.location.href);
             if (url.searchParams.has('token')) {
-                url.searchParams.delete('token');
-                window.history.replaceState({}, '', url.toString());
+                // Only remove token if user is authenticated (via cookie or user prop)
+                // This prevents logout when clicking links immediately after login
+                const hasCookie = document.cookie.includes('auth_token=');
+                const hasLocalStorage = localStorage.getItem('auth_token');
+                
+                // Wait longer and ensure both cookie and localStorage are set before removing token
+                // Also check that user prop is actually set (not just cookie exists)
+                if (user && user.id && (hasCookie || hasLocalStorage)) {
+                    // Much longer delay to ensure cookie is fully processed by server
+                    // and Inertia requests can authenticate properly
+                    // Also wait for any pending navigation to complete
+                    setTimeout(() => {
+                        // Triple-check: user prop, cookie, and localStorage all exist
+                        const stillHasCookie = document.cookie.includes('auth_token=');
+                        const stillHasLocalStorage = localStorage.getItem('auth_token');
+                        const currentUser = user; // Capture user from closure
+                        
+                        // Only remove if all authentication methods are confirmed
+                        if (currentUser && currentUser.id && (stillHasCookie || stillHasLocalStorage)) {
+                            // Don't remove token if we're on a page that might need it
+                            const currentPath = window.location.pathname;
+                            const sensitivePaths = ['/cart', '/checkout', '/orders'];
+                            const isSensitivePath = sensitivePaths.some(path => currentPath.startsWith(path));
+                            
+                            if (!isSensitivePath) {
+                                url.searchParams.delete('token');
+                                window.history.replaceState({}, '', url.toString());
+                            }
+                        }
+                    }, 1000); // Increased to 1 second to ensure everything is ready
+                }
             }
         } catch (_) {}
-    }, []);
+    }, [user]);
 
 	// Close mobile menu on route change (best-effort) and on Escape
 	useEffect(() => {
@@ -57,16 +98,6 @@ export default function Navigation({ user }) {
 		return () => document.removeEventListener('mousedown', onClick);
 	}, [isMobileOpen]);
 
-    // Remove token from URL if present (but keep admin token in localStorage)
-    useEffect(() => {
-        try {
-            const url = new URL(window.location.href);
-            if (url.searchParams.has('token')) {
-                url.searchParams.delete('token');
-                window.history.replaceState({}, '', url.toString());
-            }
-        } catch (_) {}
-    }, []);
 
     // Handle admin panel click - auto-login if no token
     const handleAdminPanelClick = async (e) => {
@@ -194,19 +225,34 @@ export default function Navigation({ user }) {
             } catch (_) {}
         } catch (_) {}
 
-        // Clear local/session data
+        // Clear local/session data but preserve cart_session_id cookie
         try {
             localStorage.removeItem('auth_token');
             localStorage.removeItem('admin_token');
+            
+            // Preserve cart_session_id cookie to maintain cart after logout
+            const cartSessionId = document.cookie
+                .split(';')
+                .find(c => c.trim().startsWith('cart_session_id='));
+            
+            // Clear all cookies except cart_session_id
             document.cookie.split(';').forEach((c) => {
-                document.cookie = c
-                    .replace(/^ +/, '')
-                    .replace(/=.*/, `=;expires=${new Date(0).toUTCString()};path=/`);
+                const cookieName = c.split('=')[0].trim();
+                // Don't delete cart_session_id cookie
+                if (cookieName !== 'cart_session_id') {
+                    document.cookie = c
+                        .replace(/^ +/, '')
+                        .replace(/=.*/, `=;expires=${new Date(0).toUTCString()};path=/`);
+                }
             });
         } catch (_) {}
 
+        // Determine redirect URL - if on cart page, stay on cart page
+        const currentPath = window.location.pathname;
+        const redirectUrl = currentPath === '/cart' ? '/cart' : '/';
+
         // Refresh to get latest backend state and props
-        window.location.replace("/");
+        window.location.replace(redirectUrl);
     };
 
 	return (
@@ -234,7 +280,7 @@ export default function Navigation({ user }) {
 							Products
 						</Link>
 						<Link
-							href="/cart"
+							href={getCartUrl()}
 							className="relative text-text-primary hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium"
 						>
 							<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -338,7 +384,7 @@ export default function Navigation({ user }) {
 						Products
 					</Link>
 					<Link
-						href="/cart"
+						href={getCartUrl()}
 						className="relative block text-text-primary hover:text-primary-600 hover:bg-secondary-50 active:bg-secondary-100 px-3 py-3 rounded-md text-base font-medium touch-manipulation min-h-[44px] flex items-center"
 						onClick={() => setIsMobileOpen(false)}
 					>
