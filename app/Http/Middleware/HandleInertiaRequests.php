@@ -69,25 +69,95 @@ class HandleInertiaRequests extends Middleware
 
     /**
      * Authenticate user from token
+     * Uses the same reference pattern as UserVerifyToken middleware
      */
     protected function authenticateFromToken(Request $request)
     {
-        // Check for token in Authorization header, query param, cookie, or AdminToken header
-        $token = $request->bearerToken() 
-              ?? $request->get('token') 
-              ?? $request->cookie('auth_token')
-              ?? $request->cookie('admin_token')
-              ?? $request->header('AdminToken');
+        // Check for admin impersonation (skip normal token verification)
+        $impersonateUserId = $request->header('X-Impersonate-User') ?? $request->get('impersonate_user_id');
+        if ($impersonateUserId) {
+            // Admin impersonation - let AdminImpersonation middleware handle it
+            return null;
+        }
 
-        // Debug: Log if no token found (only in development)
-        if (!$token && app()->environment(['local', 'development'])) {
-            \Log::debug('HandleInertiaRequests: No token found', [
-                'bearerToken' => $request->bearerToken(),
-                'query_token' => $request->get('token'),
-                'cookie_auth_token' => $request->cookie('auth_token'),
-                'cookie_admin_token' => $request->cookie('admin_token'),
-                'header_AdminToken' => $request->header('AdminToken'),
-                'all_cookies' => $request->cookies->all(),
+        // Check for AdminToken header or cookie (let AdminVerifyToken middleware handle it)
+        $adminToken = $request->header('AdminToken')
+                  ?? $request->headers->get('AdminToken')
+                  ?? $request->headers->get('admintoken')
+                  ?? $request->headers->get('ADMINTOKEN');
+        
+        // Also check for admin_token cookie
+        if (!$adminToken) {
+            $allCookies = $request->cookies->all();
+            $adminToken = $allCookies['admin_token'] ?? null;
+        }
+        
+        // Also check Cookie header for admin_token
+        if (!$adminToken) {
+            $cookieHeader = $request->header('Cookie', '');
+            if (preg_match('/admin_token=([^;]+)/', $cookieHeader, $matches)) {
+                $adminToken = urldecode($matches[1]);
+            }
+        }
+        
+        if ($adminToken) {
+            // Admin token present - try to authenticate as admin
+            try {
+                $decrypted = \Illuminate\Support\Facades\Crypt::decryptString($adminToken);
+                $decrypted = (object) json_decode($decrypted);
+                $userId = $decrypted->user_id;
+                
+                $admin = \App\Models\User::where('id', $userId)
+                                       ->where('is_admin', true)
+                                       ->where('is_registered', true)
+                                       ->first();
+                
+                if ($admin) {
+                    \Illuminate\Support\Facades\Auth::login($admin);
+                    return $admin;
+                }
+            } catch (\Exception $e) {
+                // Token not encrypted or invalid
+            }
+        }
+
+        // Normal token verification - following reference pattern
+        // Check bearer token, Authorization header, or cookie (for Inertia)
+        // Do NOT use URL query parameters - use localStorage/cookies only
+        $token = $request->bearerToken() 
+              ?? $request->get('Authorization');
+        
+        // Try to get token from cookie - check multiple ways
+        if (!$token) {
+            // Method 1: Standard Laravel cookie helper
+            $token = $request->cookie('auth_token');
+        }
+        
+        if (!$token) {
+            // Method 2: Direct access from cookies array
+            $allCookies = $request->cookies->all();
+            $token = $allCookies['auth_token'] ?? null;
+        }
+        
+        if (!$token) {
+            // Method 3: Check cookie header directly
+            $cookieHeader = $request->header('Cookie', '');
+            if (preg_match('/auth_token=([^;]+)/', $cookieHeader, $matches)) {
+                $token = urldecode($matches[1]);
+            }
+        }
+
+        // Debug: Log token status (only in development)
+        if (app()->environment(['local', 'development'])) {
+            \Log::debug('HandleInertiaRequests: Token check', [
+                'has_token' => !empty($token),
+                'token_preview' => $token ? substr($token, 0, 20) . '...' : null,
+                'bearerToken' => $request->bearerToken() ? 'present' : 'missing',
+                'Authorization' => $request->get('Authorization') ? 'present' : 'missing',
+                'cookie_method1' => $request->cookie('auth_token') ? 'found' : 'missing',
+                'cookie_method2' => isset($request->cookies->all()['auth_token']) ? 'found' : 'missing',
+                'cookie_header' => $request->header('Cookie') ? 'present' : 'missing',
+                'all_cookies' => array_keys($request->cookies->all()),
             ]);
         }
 
@@ -95,37 +165,36 @@ class HandleInertiaRequests extends Middleware
             return null;
         }
 
-        // First, try regular user token
+        // Use the same UserToken lookup pattern as reference
         $userToken = \App\Models\UserToken::where(function ($q) use ($token) {
             $q->where('web_access_token', $token)
               ->orWhere('app_access_token', $token);
         })->first();
 
-        if ($userToken) {
-            \Illuminate\Support\Facades\Auth::login($userToken->user);
-            return $userToken->user;
+        // Debug: Log if token not found in database
+        if (!$userToken && app()->environment(['local', 'development'])) {
+            \Log::debug('HandleInertiaRequests: Token not found in UserToken table', [
+                'token_preview' => substr($token, 0, 20) . '...',
+                'web_token_exists' => \App\Models\UserToken::where('web_access_token', $token)->exists(),
+                'app_token_exists' => \App\Models\UserToken::where('app_access_token', $token)->exists(),
+            ]);
         }
 
-        // If not found, check for encrypted admin token
-        try {
-            $decrypted = \Illuminate\Support\Facades\Crypt::decryptString($token);
-            $decrypted = (object) json_decode($decrypted);
-            $userId = $decrypted->user_id;
-            
-            $admin = \App\Models\User::where('id', $userId)
-                                   ->where('is_admin', true)
-                                   ->where('is_registered', true)
-                                   ->first();
-            
-            if ($admin) {
-                \Illuminate\Support\Facades\Auth::login($admin);
-                return $admin;
-            }
-        } catch (\Exception $e) {
-            // Token not encrypted or invalid
+        if (!$userToken) {
             return null;
         }
 
-        return null;
+        \Illuminate\Support\Facades\Auth::login($userToken->user);
+        
+        // Debug: Log successful authentication
+        if (app()->environment(['local', 'development'])) {
+            \Log::debug('HandleInertiaRequests: User authenticated', [
+                'user_id' => $userToken->user->id,
+                'user_name' => $userToken->user->name,
+                'user_email' => $userToken->user->email,
+            ]);
+        }
+        
+        return $userToken->user;
     }
 }

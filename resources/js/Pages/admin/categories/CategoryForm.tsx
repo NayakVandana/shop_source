@@ -77,10 +77,26 @@ export default function CategoryForm() {
         }
     };
 
+    // Remove token from URL immediately - use localStorage/cookies only
+    useEffect(() => {
+        try {
+            const url = new URL(window.location.href);
+            if (url.searchParams.has('token')) {
+                // Extract token and save to localStorage if not already there
+                const token = url.searchParams.get('token');
+                if (token && !localStorage.getItem('admin_token')) {
+                    localStorage.setItem('admin_token', token);
+                }
+                // Remove token from URL immediately
+                url.searchParams.delete('token');
+                window.history.replaceState({}, '', url.toString());
+            }
+        } catch (_) {}
+    }, []);
+
     const getToken = () => {
-        if (typeof window === 'undefined') return '';
-        const urlParams = new URLSearchParams(window.location.search);
-        return urlParams.get('token') || localStorage.getItem('admin_token') || '';
+        // Get token from localStorage/cookies only (not URL)
+        return localStorage.getItem('admin_token') || '';
     };
 
     const handleInputChange = (e) => {
@@ -239,8 +255,7 @@ export default function CategoryForm() {
             });
 
             if (res.data && res.data.status) {
-                const tokenQuery = token ? `?token=${token}` : '';
-                router.visit(`/admin/categories${tokenQuery}`);
+                router.visit('/admin/categories');
             } else {
                 const errorData = res.data?.data?.errors || {};
                 setErrors(errorData);
@@ -286,8 +301,22 @@ export default function CategoryForm() {
         }
     };
 
-    const tokenParam = getToken();
-    const tokenQuery = tokenParam ? `?token=${tokenParam}` : '';
+    // Remove token from URL immediately - use localStorage/cookies only
+    useEffect(() => {
+        try {
+            const url = new URL(window.location.href);
+            if (url.searchParams.has('token')) {
+                // Extract token and save to localStorage if not already there
+                const token = url.searchParams.get('token');
+                if (token && !localStorage.getItem('admin_token')) {
+                    localStorage.setItem('admin_token', token);
+                }
+                // Remove token from URL immediately
+                url.searchParams.delete('token');
+                window.history.replaceState({}, '', url.toString());
+            }
+        } catch (_) {}
+    }, []);
 
     if (loading && isEdit) {
         return (
@@ -305,7 +334,7 @@ export default function CategoryForm() {
             <Head title={isEdit ? 'Edit Category' : 'Create Category'} />
             <div className="p-4 sm:p-6 lg:p-8">
                 <div className="mb-6">
-                    <Link href={`/admin/categories${tokenQuery}`} className="text-primary-600 hover:text-primary-700 mb-4 inline-block">
+                    <Link href={`/admin/categories`} className="text-primary-600 hover:text-primary-700 mb-4 inline-block">
                         ← Back to Categories
                     </Link>
                     <Heading level={1}>{isEdit ? 'Edit Category' : 'Create New Category'}</Heading>
@@ -434,7 +463,7 @@ export default function CategoryForm() {
                                     <Button type="submit" block disabled={loading}>
                                         {loading ? 'Saving...' : isEdit ? 'Update Category' : 'Create Category'}
                                     </Button>
-                                    <Link href={`/admin/categories${tokenQuery}`}>
+                                    <Link href={`/admin/categories`}>
                                         <Button variant="outline" block>Cancel</Button>
                                     </Link>
                                 </div>

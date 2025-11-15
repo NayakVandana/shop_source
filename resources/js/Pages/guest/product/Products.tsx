@@ -17,6 +17,23 @@ export default function Products() {
 	const [addingToCart, setAddingToCart] = useState({});
 	const [cartMessages, setCartMessages] = useState({});
 
+	// Remove token from URL immediately - use localStorage/cookies only
+	useEffect(() => {
+		try {
+			const url = new URL(window.location.href);
+			if (url.searchParams.has('token')) {
+				// Extract token and save to localStorage if not already there
+				const token = url.searchParams.get('token');
+				if (token && !localStorage.getItem('auth_token')) {
+					localStorage.setItem('auth_token', token);
+				}
+				// Remove token from URL immediately
+				url.searchParams.delete('token');
+				window.history.replaceState({}, '', url.toString());
+			}
+		} catch (_) {}
+	}, []);
+
 	useEffect(() => {
 		axios
 			.post('/api/user/products/list', {})
@@ -39,8 +56,8 @@ export default function Products() {
 		setAddingToCart(prev => ({ ...prev, [productId]: true }));
 		setCartMessages(prev => ({ ...prev, [productId]: '' }));
 
-		const urlParams = new URLSearchParams(window.location.search);
-		const token = urlParams.get('token') || localStorage.getItem('auth_token') || '';
+		// Get token from localStorage/cookies only (not URL)
+		const token = localStorage.getItem('auth_token') || '';
 
 		axios.post('/api/user/cart/add', {
 			product_id: productId,
@@ -97,8 +114,8 @@ export default function Products() {
 		setAddingToCart(prev => ({ ...prev, [productId]: true }));
 		setCartMessages(prev => ({ ...prev, [productId]: '' }));
 
-		const urlParams = new URLSearchParams(window.location.search);
-		const token = urlParams.get('token') || localStorage.getItem('auth_token') || '';
+		// Get token from localStorage/cookies only (not URL)
+		const token = localStorage.getItem('auth_token') || '';
 
 		axios.post('/api/user/cart/add', {
 			product_id: productId,
@@ -121,9 +138,8 @@ export default function Products() {
 			if (response.data.status || response.data.success) {
 				// Notify header to refresh cart count
 				localStorage.setItem('cart_updated', Date.now().toString());
-				// Redirect to cart page
-				const tokenParam = token ? `?token=${token}` : '';
-				window.location.href = `/cart${tokenParam}`;
+				// Redirect to cart page without token in URL
+				window.location.href = '/cart';
 			} else {
 				setCartMessages(prev => ({ ...prev, [productId]: response.data.message || 'Failed to add to cart' }));
 			}

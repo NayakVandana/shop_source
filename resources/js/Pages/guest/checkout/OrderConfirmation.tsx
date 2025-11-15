@@ -15,24 +15,39 @@ export default function OrderConfirmation() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    // Remove token from URL immediately - use localStorage/cookies only
+    useEffect(() => {
+        try {
+            const url = new URL(window.location.href);
+            if (url.searchParams.has('token')) {
+                // Extract token and save to localStorage if not already there
+                const token = url.searchParams.get('token');
+                if (token && !localStorage.getItem('auth_token')) {
+                    localStorage.setItem('auth_token', token);
+                }
+                // Remove token from URL immediately (but keep order_id)
+                url.searchParams.delete('token');
+                window.history.replaceState({}, '', url.toString());
+            }
+        } catch (_) {}
+    }, []);
+
     // API config helper
     const getApiConfig = (options = {}) => {
         const { token: providedToken = null } = options;
         const isWebBrowser = typeof window !== 'undefined' && typeof document !== 'undefined';
         
+        // Get token from localStorage/cookies only (not URL)
         let token = providedToken;
         if (!token && isWebBrowser) {
-            const urlParams = new URLSearchParams(window.location.search);
-            token = urlParams.get('token');
-            
-            if (!token) {
-                try {
-                    token = localStorage.getItem('auth_token') || null;
-                } catch (e) {
-                    token = null;
-                }
+            // Try localStorage first
+            try {
+                token = localStorage.getItem('auth_token') || null;
+            } catch (e) {
+                token = null;
             }
             
+            // Then try cookie (for persistent authentication)
             if (!token) {
                 try {
                     const cookieToken = document.cookie

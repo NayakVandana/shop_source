@@ -70,7 +70,30 @@ class AuthController extends Controller
             // Placeholder: Dispatch AdminLogin event
             // AdminLogin::dispatch($admin);
 
-            return $this->sendJsonResponse(true, 'Admin successfully logged in', $admin, 201);
+            // Set admin_token cookie for persistent authentication
+            $response = $this->sendJsonResponse(true, 'Admin successfully logged in', $admin, 201);
+            if ($admin->access_token) {
+                // Set cookie with proper configuration for Inertia requests
+                // httpOnly: false allows JS access
+                $isSecure = $request->secure() || $request->header('X-Forwarded-Proto') === 'https';
+                // Use cookie helper to create cookie with SameSite attribute
+                $cookie = cookie('admin_token', $admin->access_token, 60 * 24 * 30, '/', null, $isSecure, false);
+                // Set SameSite attribute and assign the response back
+                $response = $response->withCookie($cookie->withSameSite('lax'));
+                
+                // Debug: Log cookie setting
+                if (app()->environment(['local', 'development'])) {
+                    \Log::debug('AdminAuthController: Cookie set on admin login', [
+                        'user_id' => $admin->id,
+                        'token_preview' => substr($admin->access_token, 0, 20) . '...',
+                        'is_secure' => $isSecure,
+                        'cookie_domain' => null,
+                        'cookie_path' => '/',
+                    ]);
+                }
+            }
+
+            return $response;
         } catch (Exception $e) {
             return $this->sendError($e);
         }

@@ -16,16 +16,22 @@ export default function Cart() {
     const [updating, setUpdating] = useState({});
     const [error, setError] = useState(null);
 
-    // Helper function to get checkout URL with token if available
-    const getCheckoutUrl = () => {
+    // Remove token from URL immediately - use localStorage/cookies only
+    useEffect(() => {
         try {
-            const urlParams = new URLSearchParams(window.location.search);
-            const token = urlParams.get('token') || localStorage.getItem('auth_token') || '';
-            return token ? `/checkout?token=${token}` : '/checkout';
-        } catch (e) {
-            return '/checkout';
-        }
-    };
+            const url = new URL(window.location.href);
+            if (url.searchParams.has('token')) {
+                // Extract token and save to localStorage if not already there
+                const token = url.searchParams.get('token');
+                if (token && !localStorage.getItem('auth_token')) {
+                    localStorage.setItem('auth_token', token);
+                }
+                // Remove token from URL immediately
+                url.searchParams.delete('token');
+                window.history.replaceState({}, '', url.toString());
+            }
+        } catch (_) {}
+    }, []);
 
     // API config helper - works for both web and mobile
     const getApiConfig = (options = {}) => {
@@ -34,24 +40,18 @@ export default function Cart() {
         // Detect if running in web browser or mobile app
         const isWebBrowser = typeof window !== 'undefined' && typeof document !== 'undefined';
         
-        // Get token from various sources
+        // Get token from localStorage/cookies only (not URL)
         let token = providedToken;
         if (!token && isWebBrowser) {
-            // Try URL first (for initial redirects)
-            const urlParams = new URLSearchParams(window.location.search);
-            token = urlParams.get('token');
-            
-            // Then try localStorage
-            if (!token) {
-                const storageKey = tokenType === 'admin' ? 'admin_token' : 'auth_token';
-                try {
-                    token = localStorage.getItem(storageKey) || null;
-                } catch (e) {
-                    token = null;
-                }
+            // Try localStorage first
+            const storageKey = tokenType === 'admin' ? 'admin_token' : 'auth_token';
+            try {
+                token = localStorage.getItem(storageKey) || null;
+            } catch (e) {
+                token = null;
             }
             
-            // Finally try cookie (for persistent authentication)
+            // Then try cookie (for persistent authentication)
             if (!token) {
                 try {
                     const cookieToken = document.cookie
@@ -444,7 +444,7 @@ export default function Cart() {
                                         <Button variant="outline" block>Continue Shopping</Button>
                                     </Link>
                                     {user ? (
-                                        <Link href={getCheckoutUrl()} className="block">
+                                        <Link href="/checkout" className="block">
                                             <Button block>Proceed to Checkout</Button>
                                         </Link>
                                     ) : (

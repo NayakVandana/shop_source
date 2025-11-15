@@ -73,10 +73,26 @@ export default function CouponCodeForm() {
         }
     };
 
+    // Remove token from URL immediately - use localStorage/cookies only
+    useEffect(() => {
+        try {
+            const url = new URL(window.location.href);
+            if (url.searchParams.has('token')) {
+                // Extract token and save to localStorage if not already there
+                const token = url.searchParams.get('token');
+                if (token && !localStorage.getItem('admin_token')) {
+                    localStorage.setItem('admin_token', token);
+                }
+                // Remove token from URL immediately
+                url.searchParams.delete('token');
+                window.history.replaceState({}, '', url.toString());
+            }
+        } catch (_) {}
+    }, []);
+
     const getToken = () => {
-        if (typeof window === 'undefined') return '';
-        const urlParams = new URLSearchParams(window.location.search);
-        return urlParams.get('token') || localStorage.getItem('admin_token') || '';
+        // Get token from localStorage/cookies only (not URL)
+        return localStorage.getItem('admin_token') || '';
     };
 
     const handleInputChange = (e) => {
@@ -226,8 +242,7 @@ export default function CouponCodeForm() {
             });
 
             if (res.data && res.data.status) {
-                const tokenQuery = token ? `?token=${token}` : '';
-                router.visit(`/admin/coupon-codes${tokenQuery}`);
+                router.visit('/admin/coupon-codes');
             } else {
                 const errorData = res.data?.data?.errors || {};
                 setErrors(errorData);
@@ -273,10 +288,22 @@ export default function CouponCodeForm() {
         }
     };
 
-    const tokenParam = typeof window !== 'undefined' 
-        ? (new URLSearchParams(window.location.search).get('token') || localStorage.getItem('admin_token') || '')
-        : '';
-    const tokenQuery = tokenParam ? `?token=${tokenParam}` : '';
+    // Remove token from URL immediately - use localStorage/cookies only
+    useEffect(() => {
+        try {
+            const url = new URL(window.location.href);
+            if (url.searchParams.has('token')) {
+                // Extract token and save to localStorage if not already there
+                const token = url.searchParams.get('token');
+                if (token && !localStorage.getItem('admin_token')) {
+                    localStorage.setItem('admin_token', token);
+                }
+                // Remove token from URL immediately
+                url.searchParams.delete('token');
+                window.history.replaceState({}, '', url.toString());
+            }
+        } catch (_) {}
+    }, []);
 
     return (
         <AdminLayout>
@@ -284,7 +311,7 @@ export default function CouponCodeForm() {
             <div className="p-4 sm:p-6 lg:p-8">
                 <div className="mb-6">
                     <Heading level={1}>{isEdit ? 'Edit Coupon Code' : 'Create New Coupon Code'}</Heading>
-                    <Link href={`/admin/coupon-codes${tokenQuery}`}>
+                    <Link href={`/admin/coupon-codes`}>
                         <Text className="text-sm text-blue-600 hover:underline mt-2 inline-block">← Back to Coupon Codes</Text>
                     </Link>
                 </div>
@@ -453,7 +480,7 @@ export default function CouponCodeForm() {
                             <Button type="submit" loading={loading}>
                                 {isEdit ? 'Update Coupon Code' : 'Create Coupon Code'}
                             </Button>
-                            <Link href={`/admin/coupon-codes${tokenQuery}`}>
+                            <Link href={`/admin/coupon-codes`}>
                                 <Button variant="outline" type="button">Cancel</Button>
                             </Link>
                         </div>

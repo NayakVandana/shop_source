@@ -16,6 +16,23 @@ export default function Checkout() {
     const [loading, setLoading] = useState(true);
     const [processing, setProcessing] = useState(false);
     const [error, setError] = useState(null);
+
+    // Remove token from URL immediately - use localStorage/cookies only
+    useEffect(() => {
+        try {
+            const url = new URL(window.location.href);
+            if (url.searchParams.has('token')) {
+                // Extract token and save to localStorage if not already there
+                const token = url.searchParams.get('token');
+                if (token && !localStorage.getItem('auth_token')) {
+                    localStorage.setItem('auth_token', token);
+                }
+                // Remove token from URL immediately
+                url.searchParams.delete('token');
+                window.history.replaceState({}, '', url.toString());
+            }
+        } catch (_) {}
+    }, []);
     const [formData, setFormData] = useState({
         shipping_name: user?.name || '',
         shipping_email: user?.email || '',
@@ -35,19 +52,17 @@ export default function Checkout() {
         const { token: providedToken = null } = options;
         const isWebBrowser = typeof window !== 'undefined' && typeof document !== 'undefined';
         
+        // Get token from localStorage/cookies only (not URL)
         let token = providedToken;
         if (!token && isWebBrowser) {
-            const urlParams = new URLSearchParams(window.location.search);
-            token = urlParams.get('token');
-            
-            if (!token) {
-                try {
-                    token = localStorage.getItem('auth_token') || null;
-                } catch (e) {
-                    token = null;
-                }
+            // Try localStorage first
+            try {
+                token = localStorage.getItem('auth_token') || null;
+            } catch (e) {
+                token = null;
             }
             
+            // Then try cookie (for persistent authentication)
             if (!token) {
                 try {
                     const cookieToken = document.cookie
@@ -112,12 +127,9 @@ export default function Checkout() {
         .then(response => {
             setProcessing(false);
             if (response.data.status || response.data.success) {
-                // Redirect to order confirmation page
+                // Redirect to order confirmation page without token in URL
                 const order = response.data.data;
-                const urlParams = new URLSearchParams(window.location.search);
-                const token = urlParams.get('token') || localStorage.getItem('auth_token') || '';
-                const tokenParam = token ? `?token=${token}` : '';
-                window.location.href = `/order-confirmation?order_id=${order.uuid}${tokenParam}`;
+                window.location.href = `/order-confirmation?order_id=${order.uuid}`;
             } else {
                 setError(response.data.message || 'Failed to place order');
                 if (response.data.data?.errors) {

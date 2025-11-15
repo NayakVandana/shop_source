@@ -150,8 +150,19 @@ class AuthController extends Controller
                 $isSecure = $request->secure() || $request->header('X-Forwarded-Proto') === 'https';
                 // Use cookie helper to create cookie with SameSite attribute
                 $cookie = cookie('auth_token', $user->access_token, 60 * 24 * 30, '/', null, $isSecure, false);
-                // Set SameSite attribute using withCookie method
-                $response->withCookie($cookie->withSameSite('lax'));
+                // Set SameSite attribute and assign the response back
+                $response = $response->withCookie($cookie->withSameSite('lax'));
+                
+                // Debug: Log cookie setting
+                if (app()->environment(['local', 'development'])) {
+                    \Log::debug('AuthController: Cookie set on login', [
+                        'user_id' => $user->id,
+                        'token_preview' => substr($user->access_token, 0, 20) . '...',
+                        'is_secure' => $isSecure,
+                        'cookie_domain' => null,
+                        'cookie_path' => '/',
+                    ]);
+                }
             }
 
             return $response;
@@ -193,8 +204,8 @@ class AuthController extends Controller
                 $isSecure = $request->secure() || $request->header('X-Forwarded-Proto') === 'https';
                 // Use cookie helper to create cookie with SameSite attribute
                 $cookie = cookie('auth_token', $user->access_token, 60 * 24 * 30, '/', null, $isSecure, false);
-                // Set SameSite attribute using withCookie method
-                $response->withCookie($cookie->withSameSite('lax'));
+                // Set SameSite attribute and assign the response back
+                $response = $response->withCookie($cookie->withSameSite('lax'));
             }
 
             return $response;

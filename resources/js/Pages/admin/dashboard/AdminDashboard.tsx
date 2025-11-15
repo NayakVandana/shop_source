@@ -18,9 +18,26 @@ export default function AdminDashboard() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    // Remove token from URL immediately - use localStorage/cookies only
     useEffect(() => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const token = urlParams.get('token') || localStorage.getItem('admin_token') || '';
+        try {
+            const url = new URL(window.location.href);
+            if (url.searchParams.has('token')) {
+                // Extract token and save to localStorage if not already there
+                const token = url.searchParams.get('token');
+                if (token && !localStorage.getItem('admin_token')) {
+                    localStorage.setItem('admin_token', token);
+                }
+                // Remove token from URL immediately
+                url.searchParams.delete('token');
+                window.history.replaceState({}, '', url.toString());
+            }
+        } catch (_) {}
+    }, []);
+
+    useEffect(() => {
+        // Get token from localStorage/cookies only (not URL)
+        const token = localStorage.getItem('admin_token') || '';
         
         axios
             .post('/api/admin/dashboard/stats', {}, {
@@ -47,10 +64,6 @@ export default function AdminDashboard() {
             .finally(() => setLoading(false));
     }, []);
 
-    const tokenParam = typeof window !== 'undefined' 
-        ? (new URLSearchParams(window.location.search).get('token') || localStorage.getItem('admin_token') || '')
-        : '';
-    const tokenQuery = tokenParam ? `?token=${tokenParam}` : '';
 
     const getImageUrl = (product) => {
         if (product.media && product.media.length > 0) {
@@ -93,7 +106,7 @@ export default function AdminDashboard() {
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-6">
                             {/* Total Products - Only show if user has products:view permission */}
                             {canViewModule(user, 'products') && (
-                                <Link href={`/admin/products${tokenQuery}`}>
+                                <Link href={`/admin/products`}>
                                     <Card className="cursor-pointer hover:shadow-lg transition-shadow">
                                         <div className="p-4">
                                             <Text className="text-sm text-gray-500 mb-1">Total Products</Text>
@@ -108,7 +121,7 @@ export default function AdminDashboard() {
                             
                             {/* Total Categories - Only show if user has categories:view permission */}
                             {canViewModule(user, 'categories') && (
-                                <Link href={`/admin/categories${tokenQuery}`}>
+                                <Link href={`/admin/categories`}>
                                     <Card className="cursor-pointer hover:shadow-lg transition-shadow">
                                         <div className="p-4">
                                             <Text className="text-sm text-gray-500 mb-1">Total Categories</Text>
@@ -120,7 +133,7 @@ export default function AdminDashboard() {
                             
                             {/* Total Users - Only show if user has users:view permission */}
                             {canViewModule(user, 'users') && (
-                                <Link href={`/admin/users${tokenQuery}`}>
+                                <Link href={`/admin/users`}>
                                     <Card className="cursor-pointer hover:shadow-lg transition-shadow">
                                         <div className="p-4">
                                             <Text className="text-sm text-gray-500 mb-1">Total Users</Text>
@@ -135,7 +148,7 @@ export default function AdminDashboard() {
                             
                             {/* Featured Products - Only show if user has products:view permission */}
                             {canViewModule(user, 'products') && (
-                                <Link href={`/admin/products${tokenQuery}`}>
+                                <Link href={`/admin/products`}>
                                     <Card className="cursor-pointer hover:shadow-lg transition-shadow">
                                         <div className="p-4">
                                             <Text className="text-sm text-gray-500 mb-1">Featured Products</Text>
@@ -147,7 +160,7 @@ export default function AdminDashboard() {
                             
                             {/* Low Stock Products - Only show if user has products:view permission */}
                             {canViewModule(user, 'products') && (
-                                <Link href={`/admin/products${tokenQuery}`}>
+                                <Link href={`/admin/products`}>
                                     <Card className={`cursor-pointer hover:shadow-lg transition-shadow ${stats.low_stock_products > 0 ? 'border-l-4 border-yellow-500' : ''}`}>
                                         <div className="p-4">
                                             <Text className="text-sm text-gray-500 mb-1">Low Stock Products</Text>
@@ -164,7 +177,7 @@ export default function AdminDashboard() {
                             
                             {/* Out of Stock - Only show if user has products:view permission */}
                             {canViewModule(user, 'products') && (
-                                <Link href={`/admin/products${tokenQuery}`}>
+                                <Link href={`/admin/products`}>
                                     <Card className={`cursor-pointer hover:shadow-lg transition-shadow ${stats.out_of_stock_products > 0 ? 'border-l-4 border-red-500' : ''}`}>
                                         <div className="p-4">
                                             <Text className="text-sm text-gray-500 mb-1">Out of Stock</Text>
@@ -185,22 +198,22 @@ export default function AdminDashboard() {
                             <Heading level={2} className="mb-4">Quick Actions</Heading>
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                                 {canViewModule(user, 'products') && (
-                                    <Link href={`/admin/products/create${tokenQuery}`}>
+                                    <Link href={`/admin/products/create`}>
                                         <Button block>Add New Product</Button>
                                     </Link>
                                 )}
                                 {canViewModule(user, 'categories') && (
-                                    <Link href={`/admin/categories${tokenQuery}`}>
+                                    <Link href={`/admin/categories`}>
                                         <Button variant="outline" block>Manage Categories</Button>
                                     </Link>
                                 )}
                                 {canViewModule(user, 'users') && (
-                                    <Link href={`/admin/users${tokenQuery}`}>
+                                    <Link href={`/admin/users`}>
                                         <Button variant="outline" block>Manage Users</Button>
                                     </Link>
                                 )}
                                 {canViewModule(user, 'permissions') && (
-                                    <Link href={`/admin/permissions${tokenQuery}`}>
+                                    <Link href={`/admin/permissions`}>
                                         <Button variant="outline" block>Manage Permissions</Button>
                                     </Link>
                                 )}
@@ -231,7 +244,7 @@ export default function AdminDashboard() {
                                                         <Text className="font-medium text-sm truncate">{product.name}</Text>
                                                         <Text className="text-xs text-gray-500">{product.category?.name || 'No category'}</Text>
                                                     </div>
-                                                    <Link href={`/admin/products/edit${tokenQuery ? tokenQuery + '&' : '?'}id=${product.uuid}`}>
+                                                    <Link href={`/admin/products/edit?id=${product.uuid}`}>
                                                         <Button size="sm" variant="outline">View</Button>
                                                     </Link>
                                                 </div>
@@ -239,7 +252,7 @@ export default function AdminDashboard() {
                                         </div>
                                     )}
                                     <div className="mt-4">
-                                        <Link href={`/admin/products${tokenQuery}`}>
+                                        <Link href={`/admin/products`}>
                                             <Button variant="outline" size="sm" block>View All Products</Button>
                                         </Link>
                                     </div>
@@ -282,7 +295,7 @@ export default function AdminDashboard() {
                                         </div>
                                     )}
                                     <div className="mt-4">
-                                        <Link href={`/admin/users${tokenQuery}`}>
+                                        <Link href={`/admin/users`}>
                                             <Button variant="outline" size="sm" block>View All Users</Button>
                                         </Link>
                                     </div>

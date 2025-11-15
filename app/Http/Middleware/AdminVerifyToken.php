@@ -16,14 +16,27 @@ class AdminVerifyToken extends Controller
     {
         // Try multiple ways to get the token
         // Laravel normalizes headers, so try different variations
+        // Do NOT use URL query parameters - use localStorage/cookies only
         $token = $request->headers->get('AdminToken')
               ?? $request->headers->get('admintoken')
               ?? $request->headers->get('ADMINTOKEN')
               ?? $request->header('AdminToken')
               ?? $request->header('admintoken')
-              ?? $request->header('ADMINTOKEN')
-              ?? $request->get('AdminToken')
-              ?? $request->get('adminToken');
+              ?? $request->header('ADMINTOKEN');
+        
+        // Also check for admin_token cookie
+        if (!$token) {
+            $allCookies = $request->cookies->all();
+            $token = $allCookies['admin_token'] ?? null;
+        }
+        
+        // Also check Cookie header for admin_token
+        if (!$token) {
+            $cookieHeader = $request->header('Cookie', '');
+            if (preg_match('/admin_token=([^;]+)/', $cookieHeader, $matches)) {
+                $token = urldecode($matches[1]);
+            }
+        }
 
         if (!$token) {
             // Log for debugging - check all headers

@@ -68,9 +68,26 @@ export default function AdminPermissions() {
         }
     };
 
+    // Remove token from URL immediately - use localStorage/cookies only
+    useEffect(() => {
+        try {
+            const url = new URL(window.location.href);
+            if (url.searchParams.has('token')) {
+                // Extract token and save to localStorage if not already there
+                const token = url.searchParams.get('token');
+                if (token && !localStorage.getItem('admin_token')) {
+                    localStorage.setItem('admin_token', token);
+                }
+                // Remove token from URL immediately
+                url.searchParams.delete('token');
+                window.history.replaceState({}, '', url.toString());
+            }
+        } catch (_) {}
+    }, []);
+
     const getToken = () => {
-        const urlParams = new URLSearchParams(window.location.search);
-        return urlParams.get('token') || localStorage.getItem('admin_token') || '';
+        // Get token from localStorage/cookies only (not URL)
+        return localStorage.getItem('admin_token') || '';
     };
 
     const handleDelete = async (id) => {
@@ -153,8 +170,6 @@ export default function AdminPermissions() {
         }
     };
 
-    const tokenParam = getToken();
-    const tokenQuery = tokenParam ? `?token=${tokenParam}` : '';
 
     return (
         <AdminLayout>
@@ -163,7 +178,7 @@ export default function AdminPermissions() {
                 <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <Heading level={1}>Permissions Management</Heading>
                     {canCreate && (
-                        <Link href={`/admin/permissions/bulk-create${tokenQuery}`}>
+                        <Link href={`/admin/permissions/bulk-create`}>
                             <Button>Create by Module</Button>
                         </Link>
                     )}
@@ -204,7 +219,7 @@ export default function AdminPermissions() {
                                             </Text>
                                         </div>
                                         {canCreate && (
-                                            <Link href={`/admin/permissions/bulk-create${tokenQuery}${tokenQuery ? '&' : '?'}role=${role}`}>
+                                            <Link href={`/admin/permissions/bulk-create?role=${role}`}>
                                                 <Button size="sm" variant="outline">Add Permissions</Button>
                                             </Link>
                                         )}

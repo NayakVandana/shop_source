@@ -22,9 +22,26 @@ export default function PermissionBulkForm() {
     const [selectedRoleFromUrl, setSelectedRoleFromUrl] = useState(null);
     const [existingPermissions, setExistingPermissions] = useState({}); // { module: [actions] }
 
+    // Remove token from URL immediately - use localStorage/cookies only
+    useEffect(() => {
+        try {
+            const url = new URL(window.location.href);
+            if (url.searchParams.has('token')) {
+                // Extract token and save to localStorage if not already there
+                const token = url.searchParams.get('token');
+                if (token && !localStorage.getItem('admin_token')) {
+                    localStorage.setItem('admin_token', token);
+                }
+                // Remove token from URL immediately
+                url.searchParams.delete('token');
+                window.history.replaceState({}, '', url.toString());
+            }
+        } catch (_) {}
+    }, []);
+
     const getToken = () => {
-        const urlParams = new URLSearchParams(window.location.search);
-        return urlParams.get('token') || localStorage.getItem('admin_token') || '';
+        // Get token from localStorage/cookies only (not URL)
+        return localStorage.getItem('admin_token') || '';
     };
 
     const loadRoles = async () => {
@@ -292,8 +309,7 @@ export default function PermissionBulkForm() {
             
             if (allSuccess) {
                 const totalCreated = results.reduce((sum, r) => sum + (r.data?.count || 0), 0);
-                const tokenQuery = tokenParam ? `?token=${tokenParam}` : '';
-                router.visit(`/admin/permissions${tokenQuery}`);
+                router.visit('/admin/permissions');
             } else {
                 const errorData = results.find(r => r && !r.status)?.data?.errors || {};
                 setErrors(errorData);
@@ -312,15 +328,13 @@ export default function PermissionBulkForm() {
         }
     };
 
-    const tokenParam = getToken();
-    const tokenQuery = tokenParam ? `?token=${tokenParam}` : '';
 
     return (
         <AdminLayout>
             <Head title="Create Permissions by Module" />
             <div className="p-4 sm:p-6 lg:p-8">
                 <div className="mb-6">
-                    <Link href={`/admin/permissions${tokenQuery}`} className="text-primary-600 hover:text-primary-700 mb-4 inline-block">
+                    <Link href={`/admin/permissions`} className="text-primary-600 hover:text-primary-700 mb-4 inline-block">
                         ← Back to Permissions
                     </Link>
                     <Heading level={1}>Create Permissions by Module</Heading>
@@ -519,7 +533,7 @@ export default function PermissionBulkForm() {
                                             return `Create ${totalPermissions} Permission(s)`;
                                         })()}
                                     </Button>
-                                    <Link href={`/admin/permissions${tokenQuery}`}>
+                                    <Link href={`/admin/permissions`}>
                                         <Button variant="outline" block>Cancel</Button>
                                     </Link>
                                     {(() => {

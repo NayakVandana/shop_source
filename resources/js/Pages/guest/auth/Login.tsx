@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React, { useState } from 'react';
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, usePage, router } from '@inertiajs/react';
 import { FormEvent } from 'react';
 import GuestLayout from '../../../Layouts/GuestLayout';
 import FormInput from '../../../Components/FormInputs/FormInput';
@@ -38,23 +38,25 @@ export default function Login() {
         .then(data => {
             setProcessing(false);
             if (data.status) {
-                // Store the token if provided
+                // Store token in localStorage (cookie is already set by backend)
                 if (data.data && data.data.access_token) {
                     localStorage.setItem('auth_token', data.data.access_token);
+                    console.log('✅ Token stored in localStorage:', data.data.access_token.substring(0, 20) + '...');
                 }
+                
                 // Redirect to intended page or products page
-                const token = data.data?.access_token || '';
                 const urlParams = new URLSearchParams(window.location.search);
                 const redirect = urlParams.get('redirect') || '/products';
                 
                 // Notify cart to refresh (cart will be merged on backend)
                 localStorage.setItem('cart_updated', Date.now().toString());
                 
-                if (token) {
-                    window.location.href = `${redirect}?token=${token}`;
-                } else {
+                // Use full page reload to ensure cookie is sent with Inertia request
+                // Small delay to ensure cookie is set in browser
+                setTimeout(() => {
+                    console.log('🔄 Redirecting to:', redirect);
                     window.location.href = redirect;
-                }
+                }, 100);
             } else {
                 // Show error messages
                 setError(data.message || 'Login failed');

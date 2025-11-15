@@ -46,17 +46,18 @@ export default function AdminLogin() {
             console.log('Response data:', data);
             setProcessing(false);
             if (data.status) {
-                // Store the token if provided
+                // Store token in localStorage (cookie is already set by backend)
                 if (data.data && data.data.access_token) {
                     localStorage.setItem('admin_token', data.data.access_token);
+                    console.log('✅ Admin token stored in localStorage:', data.data.access_token.substring(0, 20) + '...');
                 }
-                // Redirect to admin dashboard with token
-                const token = data.data?.access_token || '';
-                if (token) {
-                    window.location.href = `/admin/dashboard?token=${token}`;
-                } else {
+                
+                // Redirect without token in URL - use localStorage/cookies only
+                // Small delay to ensure cookie is set in browser
+                setTimeout(() => {
+                    console.log('🔄 Redirecting to admin dashboard');
                     window.location.href = '/admin/dashboard';
-                }
+                }, 100);
             } else {
                 // Show error messages with more details
                 const errorMsg = data.message || 'Login failed';

@@ -14,29 +14,24 @@ export default function AdminLayout({ children, is404 = false }) {
         setMounted(true);
     }, []);
     
-    // Get admin token from localStorage and URL
-    const getAdminToken = () => {
-        if (!mounted) return '';
-        
-        // Try to get from URL first (for initial redirect)
-        const urlParams = new URLSearchParams(window.location.search);
-        const urlToken = urlParams.get('token');
-        
-        // Then try localStorage
-        const localToken = localStorage.getItem('admin_token');
-        
-        return urlToken || localToken || '';
-    };
-    
-    const adminToken = getAdminToken();
-    const tokenParam = adminToken ? `?token=${adminToken}` : '';
-    
-    // Update localStorage with token from URL if present
+    // Remove token from URL immediately - use localStorage/cookies only
     useEffect(() => {
-        if (adminToken && mounted) {
-            localStorage.setItem('admin_token', adminToken);
-        }
-    }, [adminToken, mounted]);
+        if (!mounted) return;
+        
+        try {
+            const url = new URL(window.location.href);
+            if (url.searchParams.has('token')) {
+                // Extract token and save to localStorage if not already there
+                const token = url.searchParams.get('token');
+                if (token && !localStorage.getItem('admin_token')) {
+                    localStorage.setItem('admin_token', token);
+                }
+                // Remove token from URL immediately
+                url.searchParams.delete('token');
+                window.history.replaceState({}, '', url.toString());
+            }
+        } catch (_) {}
+    }, [mounted]);
 
     return (
         <div className="min-h-screen bg-gray-50 flex">
@@ -45,7 +40,7 @@ export default function AdminLayout({ children, is404 = false }) {
                 <div className="h-full flex flex-col">
                     {/* Logo */}
                     <div className="flex items-center justify-between h-14 sm:h-16 px-4 sm:px-6 border-b border-gray-800">
-                        <Link href={`/admin/dashboard${tokenParam}`} className="text-lg sm:text-xl font-bold text-white">
+                        <Link href="/admin/dashboard" className="text-lg sm:text-xl font-bold text-white">
                             ShopSource
                         </Link>
                         <button
@@ -63,7 +58,7 @@ export default function AdminLayout({ children, is404 = false }) {
                         {/* Dashboard - Always visible for admins */}
                         {canViewModule(user, 'dashboard') && (
                             <Link
-                                href={`/admin/dashboard${tokenParam}`}
+                                href="/admin/dashboard"
                                 className="block px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors touch-manipulation min-h-[44px] flex items-center"
                                 onClick={() => setSidebarOpen(false)}
                             >
@@ -74,7 +69,7 @@ export default function AdminLayout({ children, is404 = false }) {
                         {/* Products - Check for products:view permission */}
                         {canViewModule(user, 'products') && (
                             <Link
-                                href={`/admin/products${tokenParam}`}
+                                href="/admin/products"
                                 className="block px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors touch-manipulation min-h-[44px] flex items-center"
                                 onClick={() => setSidebarOpen(false)}
                             >
@@ -85,7 +80,7 @@ export default function AdminLayout({ children, is404 = false }) {
                         {/* Discounts - Check for products:view permission */}
                         {canViewModule(user, 'products') && (
                             <Link
-                                href={`/admin/discounts${tokenParam}`}
+                                href="/admin/discounts"
                                 className="block px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors touch-manipulation min-h-[44px] flex items-center"
                                 onClick={() => setSidebarOpen(false)}
                             >
@@ -96,7 +91,7 @@ export default function AdminLayout({ children, is404 = false }) {
                         {/* Coupon Codes - Check for products:view permission */}
                         {canViewModule(user, 'products') && (
                             <Link
-                                href={`/admin/coupon-codes${tokenParam}`}
+                                href="/admin/coupon-codes"
                                 className="block px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors touch-manipulation min-h-[44px] flex items-center"
                                 onClick={() => setSidebarOpen(false)}
                             >
@@ -107,7 +102,7 @@ export default function AdminLayout({ children, is404 = false }) {
                         {/* Categories - Check for categories:view permission */}
                         {canViewModule(user, 'categories') && (
                             <Link
-                                href={`/admin/categories${tokenParam}`}
+                                href="/admin/categories"
                                 className="block px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors touch-manipulation min-h-[44px] flex items-center"
                                 onClick={() => setSidebarOpen(false)}
                             >
@@ -118,7 +113,7 @@ export default function AdminLayout({ children, is404 = false }) {
                         {/* Users - Check for users:view permission */}
                         {canViewModule(user, 'users') && (
                             <Link
-                                href={`/admin/users${tokenParam}`}
+                                href="/admin/users"
                                 className="block px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors touch-manipulation min-h-[44px] flex items-center"
                                 onClick={() => setSidebarOpen(false)}
                             >
@@ -129,7 +124,7 @@ export default function AdminLayout({ children, is404 = false }) {
                         {/* Orders - Check for orders:view permission */}
                         {canViewModule(user, 'orders') && (
                             <Link
-                                href={`/admin/orders${tokenParam}`}
+                                href="/admin/orders"
                                 className="block px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors touch-manipulation min-h-[44px] flex items-center"
                                 onClick={() => setSidebarOpen(false)}
                             >
@@ -140,7 +135,7 @@ export default function AdminLayout({ children, is404 = false }) {
                         {/* Permissions - Check for permissions:view or permissions:manage permission */}
                         {(hasPermission(user, 'permissions:view') || hasPermission(user, 'permissions:manage')) && (
                             <Link
-                                href={`/admin/permissions${tokenParam}`}
+                                href="/admin/permissions"
                                 className="block px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors touch-manipulation min-h-[44px] flex items-center"
                                 onClick={() => setSidebarOpen(false)}
                             >
@@ -222,7 +217,7 @@ export default function AdminLayout({ children, is404 = false }) {
                                 <div className="text-3xl font-bold text-gray-900 mb-2">404</div>
                                 <div className="text-lg text-gray-600 mb-6">Page not found</div>
                                 <a
-                                    href={`/admin/dashboard${tokenParam}`}
+                                    href="/admin/dashboard"
                                     className="text-indigo-600 hover:text-indigo-500 font-medium"
                                 >
                                     Back to Admin Dashboard

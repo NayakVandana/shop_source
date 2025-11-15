@@ -9,16 +9,61 @@ export default function Navigation({ user }) {
     // Only allow admin view for admins
     const isAdmin = user && user.name && (user.is_admin === true || user.role === 'admin');
 
-    // Helper function to get cart URL with token if available
-    const getCartUrl = () => {
-        try {
-            const urlParams = new URLSearchParams(window.location.search);
-            const token = urlParams.get('token') || localStorage.getItem('auth_token') || '';
-            return token ? `/cart?token=${token}` : '/cart';
-        } catch (e) {
-            return '/cart';
+    // Console log user type for debugging
+    useEffect(() => {
+        // Check localStorage and cookies for debugging
+        const localToken = localStorage.getItem('auth_token');
+        const cookieToken = document.cookie
+            .split(';')
+            .find(c => c.trim().startsWith('auth_token='));
+        
+        if (user) {
+            if (isAdmin) {
+                console.log('🔐 User Type: ADMIN', {
+                    id: user.id,
+                    name: user.name,
+                    email: user.email,
+                    role: user.role,
+                    is_admin: user.is_admin,
+                    has_localStorage_token: !!localToken,
+                    has_cookie_token: !!cookieToken
+                });
+            } else {
+                console.log('👤 User Type: USER', {
+                    id: user.id,
+                    name: user.name,
+                    email: user.email,
+                    role: user.role,
+                    has_localStorage_token: !!localToken,
+                    has_cookie_token: !!cookieToken
+                });
+            }
+        } else {
+            console.log('👋 User Type: GUEST (Not logged in)', {
+                has_localStorage_token: !!localToken,
+                has_cookie_token: !!cookieToken,
+                localStorage_token_preview: localToken ? localToken.substring(0, 20) + '...' : null,
+                cookie_token_preview: cookieToken ? cookieToken.split('=')[1]?.substring(0, 20) + '...' : null
+            });
         }
-    };
+    }, [user, isAdmin]);
+
+    // Remove token from URL immediately - use localStorage/cookies only
+    useEffect(() => {
+        try {
+            const url = new URL(window.location.href);
+            if (url.searchParams.has('token')) {
+                // Extract token and save to localStorage if not already there
+                const token = url.searchParams.get('token');
+                if (token && !localStorage.getItem('auth_token')) {
+                    localStorage.setItem('auth_token', token);
+                }
+                // Remove token from URL immediately
+                url.searchParams.delete('token');
+                window.history.replaceState({}, '', url.toString());
+            }
+        } catch (_) {}
+    }, []);
 
 	// Mobile menu state
 	const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -31,46 +76,6 @@ export default function Navigation({ user }) {
         }
     }, [isAdmin]);
 
-    // Always strip token from URL after ensuring user is authenticated (to avoid lingering re-auth)
-    // But only remove it when user is confirmed authenticated and not during navigation
-    useEffect(() => {
-        try {
-            const url = new URL(window.location.href);
-            if (url.searchParams.has('token')) {
-                // Only remove token if user is authenticated (via cookie or user prop)
-                // This prevents logout when clicking links immediately after login
-                const hasCookie = document.cookie.includes('auth_token=');
-                const hasLocalStorage = localStorage.getItem('auth_token');
-                
-                // Wait longer and ensure both cookie and localStorage are set before removing token
-                // Also check that user prop is actually set (not just cookie exists)
-                if (user && user.id && (hasCookie || hasLocalStorage)) {
-                    // Much longer delay to ensure cookie is fully processed by server
-                    // and Inertia requests can authenticate properly
-                    // Also wait for any pending navigation to complete
-                    setTimeout(() => {
-                        // Triple-check: user prop, cookie, and localStorage all exist
-                        const stillHasCookie = document.cookie.includes('auth_token=');
-                        const stillHasLocalStorage = localStorage.getItem('auth_token');
-                        const currentUser = user; // Capture user from closure
-                        
-                        // Only remove if all authentication methods are confirmed
-                        if (currentUser && currentUser.id && (stillHasCookie || stillHasLocalStorage)) {
-                            // Don't remove token if we're on a page that might need it
-                            const currentPath = window.location.pathname;
-                            const sensitivePaths = ['/cart', '/checkout', '/orders'];
-                            const isSensitivePath = sensitivePaths.some(path => currentPath.startsWith(path));
-                            
-                            if (!isSensitivePath) {
-                                url.searchParams.delete('token');
-                                window.history.replaceState({}, '', url.toString());
-                            }
-                        }
-                    }, 1000); // Increased to 1 second to ensure everything is ready
-                }
-            }
-        } catch (_) {}
-    }, [user]);
 
 	// Close mobile menu on route change (best-effort) and on Escape
 	useEffect(() => {
@@ -124,7 +129,10 @@ export default function Navigation({ user }) {
                 if (data.status && data.data && data.data.access_token) {
                     adminToken = data.data.access_token;
                     localStorage.setItem('admin_token', adminToken);
-                    window.location.href = `/admin/dashboard?token=${adminToken}`;
+                    // Redirect without token in URL - use localStorage/cookies only
+                    setTimeout(() => {
+                        window.location.href = '/admin/dashboard';
+                    }, 100);
                 } else {
                     console.error('Admin login failed:', data);
                     window.location.href = '/admin/login';
@@ -147,8 +155,22 @@ export default function Navigation({ user }) {
     // Load cart count
     useEffect(() => {
         const loadCartCount = () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const token = urlParams.get('token') || localStorage.getItem('auth_token') || '';
+            // Get token from localStorage/cookies only (not URL)
+            let token = localStorage.getItem('auth_token') || '';
+            
+            // Try cookie if localStorage doesn't have it
+            if (!token) {
+                try {
+                    const cookieToken = document.cookie
+                        .split(';')
+                        .find(c => c.trim().startsWith('auth_token='));
+                    if (cookieToken) {
+                        token = cookieToken.split('=')[1]?.trim() || '';
+                    }
+                } catch (e) {
+                    token = '';
+                }
+            }
 
             axios.post('/api/user/cart/index', {}, {
                 headers: token ? {
@@ -190,10 +212,22 @@ export default function Navigation({ user }) {
     // Logout handler
     const handleLogout = async () => {
         try {
-            const urlParams = new URLSearchParams(window.location.search);
-            const qpToken = urlParams.get('token');
-            const localToken = localStorage.getItem('auth_token') || '';
-            const token = qpToken || localToken || '';
+            // Get token from localStorage/cookies only (not URL)
+            let token = localStorage.getItem('auth_token') || '';
+            
+            // Try cookie if localStorage doesn't have it
+            if (!token) {
+                try {
+                    const cookieToken = document.cookie
+                        .split(';')
+                        .find(c => c.trim().startsWith('auth_token='));
+                    if (cookieToken) {
+                        token = cookieToken.split('=')[1]?.trim() || '';
+                    }
+                } catch (e) {
+                    token = '';
+                }
+            }
 
             if (token) {
                 await fetch('/api/user/logout', {
@@ -280,7 +314,7 @@ export default function Navigation({ user }) {
 							Products
 						</Link>
 						<Link
-							href={getCartUrl()}
+							href="/cart"
 							className="relative text-text-primary hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium"
 						>
 							<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -384,7 +418,7 @@ export default function Navigation({ user }) {
 						Products
 					</Link>
 					<Link
-						href={getCartUrl()}
+						href="/cart"
 						className="relative block text-text-primary hover:text-primary-600 hover:bg-secondary-50 active:bg-secondary-100 px-3 py-3 rounded-md text-base font-medium touch-manipulation min-h-[44px] flex items-center"
 						onClick={() => setIsMobileOpen(false)}
 					>

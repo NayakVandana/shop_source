@@ -88,10 +88,26 @@ export default function DiscountForm() {
         }
     };
 
+    // Remove token from URL immediately - use localStorage/cookies only
+    useEffect(() => {
+        try {
+            const url = new URL(window.location.href);
+            if (url.searchParams.has('token')) {
+                // Extract token and save to localStorage if not already there
+                const token = url.searchParams.get('token');
+                if (token && !localStorage.getItem('admin_token')) {
+                    localStorage.setItem('admin_token', token);
+                }
+                // Remove token from URL immediately
+                url.searchParams.delete('token');
+                window.history.replaceState({}, '', url.toString());
+            }
+        } catch (_) {}
+    }, []);
+
     const getToken = () => {
-        if (typeof window === 'undefined') return '';
-        const urlParams = new URLSearchParams(window.location.search);
-        return urlParams.get('token') || localStorage.getItem('admin_token') || '';
+        // Get token from localStorage/cookies only (not URL)
+        return localStorage.getItem('admin_token') || '';
     };
 
     const handleInputChange = (e) => {
@@ -237,8 +253,7 @@ export default function DiscountForm() {
             });
 
             if (res.data && res.data.status) {
-                const tokenQuery = token ? `?token=${token}` : '';
-                router.visit(`/admin/discounts${tokenQuery}`);
+                router.visit('/admin/discounts');
             } else {
                 const errorData = res.data?.data?.errors || {};
                 setErrors(errorData);
@@ -284,10 +299,6 @@ export default function DiscountForm() {
         }
     };
 
-    const tokenParam = typeof window !== 'undefined' 
-        ? (new URLSearchParams(window.location.search).get('token') || localStorage.getItem('admin_token') || '')
-        : '';
-    const tokenQuery = tokenParam ? `?token=${tokenParam}` : '';
 
     return (
         <AdminLayout>
@@ -295,7 +306,7 @@ export default function DiscountForm() {
             <div className="p-4 sm:p-6 lg:p-8">
                 <div className="mb-6">
                     <Heading level={1}>{isEdit ? 'Edit Discount' : 'Create New Discount'}</Heading>
-                    <Link href={`/admin/discounts${tokenQuery}`}>
+                    <Link href={`/admin/discounts`}>
                         <Text className="text-sm text-blue-600 hover:underline mt-2 inline-block">← Back to Discounts</Text>
                     </Link>
                 </div>
@@ -454,7 +465,7 @@ export default function DiscountForm() {
                             <Button type="submit" loading={loading}>
                                 {isEdit ? 'Update Discount' : 'Create Discount'}
                             </Button>
-                            <Link href={`/admin/discounts${tokenQuery}`}>
+                            <Link href={`/admin/discounts`}>
                                 <Button variant="outline" type="button">Cancel</Button>
                             </Link>
                         </div>

@@ -26,8 +26,8 @@ export default function AdminUsers() {
         setLoading(true);
         setError(null);
         try {
-            const urlParams = new URLSearchParams(window.location.search);
-            const token = urlParams.get('token') || localStorage.getItem('admin_token') || '';
+            // Get token from localStorage/cookies only (not URL)
+            const token = localStorage.getItem('admin_token') || '';
             
             const params: any = {
                 per_page: 15,
@@ -133,8 +133,8 @@ export default function AdminUsers() {
         if (!confirm('Are you sure you want to delete this user?')) return;
         
         try {
-            const urlParams = new URLSearchParams(window.location.search);
-            const token = urlParams.get('token') || localStorage.getItem('admin_token') || '';
+            // Get token from localStorage/cookies only (not URL)
+            const token = localStorage.getItem('admin_token') || '';
             
             await axios.post('/api/admin/users/destroy', { id: uuid }, {
                 headers: { AdminToken: token }
@@ -164,10 +164,22 @@ export default function AdminUsers() {
         return roleLabels[role] || role;
     };
 
-    const tokenParam = typeof window !== 'undefined' 
-        ? (new URLSearchParams(window.location.search).get('token') || localStorage.getItem('admin_token') || '')
-        : '';
-    const tokenQuery = tokenParam ? `?token=${tokenParam}` : '';
+    // Remove token from URL immediately - use localStorage/cookies only
+    useEffect(() => {
+        try {
+            const url = new URL(window.location.href);
+            if (url.searchParams.has('token')) {
+                // Extract token and save to localStorage if not already there
+                const token = url.searchParams.get('token');
+                if (token && !localStorage.getItem('admin_token')) {
+                    localStorage.setItem('admin_token', token);
+                }
+                // Remove token from URL immediately
+                url.searchParams.delete('token');
+                window.history.replaceState({}, '', url.toString());
+            }
+        } catch (_) {}
+    }, []);
 
     return (
         <AdminLayout>

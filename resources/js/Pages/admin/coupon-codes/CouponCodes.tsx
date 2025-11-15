@@ -25,8 +25,8 @@ export default function AdminCouponCodes() {
         setLoading(true);
         setError(null);
         try {
-            const urlParams = new URLSearchParams(window.location.search);
-            const token = urlParams.get('token') || localStorage.getItem('admin_token') || '';
+            // Get token from localStorage/cookies only (not URL)
+            const token = localStorage.getItem('admin_token') || '';
             
             const params: any = {
                 per_page: 10,
@@ -82,8 +82,8 @@ export default function AdminCouponCodes() {
         if (!confirm('Are you sure you want to delete this coupon code?')) return;
         
         try {
-            const urlParams = new URLSearchParams(window.location.search);
-            const token = urlParams.get('token') || localStorage.getItem('admin_token') || '';
+            // Get token from localStorage/cookies only (not URL)
+            const token = localStorage.getItem('admin_token') || '';
             
             await axios.post('/api/admin/coupon-codes/destroy', { id: uuid }, {
                 headers: { AdminToken: token }
@@ -106,10 +106,22 @@ export default function AdminCouponCodes() {
         return `$${coupon.value}`;
     };
 
-    const tokenParam = typeof window !== 'undefined' 
-        ? (new URLSearchParams(window.location.search).get('token') || localStorage.getItem('admin_token') || '')
-        : '';
-    const tokenQuery = tokenParam ? `?token=${tokenParam}` : '';
+    // Remove token from URL immediately - use localStorage/cookies only
+    useEffect(() => {
+        try {
+            const url = new URL(window.location.href);
+            if (url.searchParams.has('token')) {
+                // Extract token and save to localStorage if not already there
+                const token = url.searchParams.get('token');
+                if (token && !localStorage.getItem('admin_token')) {
+                    localStorage.setItem('admin_token', token);
+                }
+                // Remove token from URL immediately
+                url.searchParams.delete('token');
+                window.history.replaceState({}, '', url.toString());
+            }
+        } catch (_) {}
+    }, []);
 
     return (
         <AdminLayout>
@@ -129,7 +141,7 @@ export default function AdminCouponCodes() {
                             </div>
                         )}
                     </div>
-                    <Link href={`/admin/coupon-codes/create${tokenQuery}`}>
+                    <Link href={`/admin/coupon-codes/create`}>
                         <Button>Add New Coupon Code</Button>
                     </Link>
                 </div>
@@ -252,7 +264,7 @@ export default function AdminCouponCodes() {
                                                 </td>
                                                 <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
                                                     <div className="flex justify-end gap-2">
-                                                        <Link href={`/admin/coupon-codes/edit${tokenQuery ? tokenQuery + '&' : '?'}id=${coupon.uuid}`}>
+                                                        <Link href={`/admin/coupon-codes/edit?id=${coupon.uuid}`}>
                                                             <Button variant="outline" size="sm">Edit</Button>
                                                         </Link>
                                                         <Button

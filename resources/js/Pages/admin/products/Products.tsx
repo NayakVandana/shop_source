@@ -23,10 +23,27 @@ export default function AdminProducts() {
         loadProducts();
     }, []);
 
+    // Remove token from URL immediately - use localStorage/cookies only
+    useEffect(() => {
+        try {
+            const url = new URL(window.location.href);
+            if (url.searchParams.has('token')) {
+                // Extract token and save to localStorage if not already there
+                const token = url.searchParams.get('token');
+                if (token && !localStorage.getItem('admin_token')) {
+                    localStorage.setItem('admin_token', token);
+                }
+                // Remove token from URL immediately
+                url.searchParams.delete('token');
+                window.history.replaceState({}, '', url.toString());
+            }
+        } catch (_) {}
+    }, []);
+
     const loadCategories = async () => {
         try {
-            const urlParams = new URLSearchParams(window.location.search);
-            const token = urlParams.get('token') || localStorage.getItem('admin_token') || '';
+            // Get token from localStorage/cookies only (not URL)
+            const token = localStorage.getItem('admin_token') || '';
             
             const res = await axios.post('/api/admin/categories/list', {}, {
                 headers: { AdminToken: token }
@@ -43,8 +60,8 @@ export default function AdminProducts() {
         setLoading(true);
         setError(null);
         try {
-            const urlParams = new URLSearchParams(window.location.search);
-            const token = urlParams.get('token') || localStorage.getItem('admin_token') || '';
+            // Get token from localStorage/cookies only (not URL)
+            const token = localStorage.getItem('admin_token') || '';
             
             console.log('Loading products with token:', token ? 'Token exists' : 'No token');
             
@@ -105,8 +122,8 @@ export default function AdminProducts() {
         if (!confirm('Are you sure you want to delete this product?')) return;
         
         try {
-            const urlParams = new URLSearchParams(window.location.search);
-            const token = urlParams.get('token') || localStorage.getItem('admin_token') || '';
+            // Get token from localStorage/cookies only (not URL)
+            const token = localStorage.getItem('admin_token') || '';
             
             await axios.post('/api/admin/products/destroy', { id: uuid }, {
                 headers: { AdminToken: token }
@@ -136,10 +153,6 @@ export default function AdminProducts() {
         return '/images/placeholder.svg';
     };
 
-    const tokenParam = typeof window !== 'undefined' 
-        ? (new URLSearchParams(window.location.search).get('token') || localStorage.getItem('admin_token') || '')
-        : '';
-    const tokenQuery = tokenParam ? `?token=${tokenParam}` : '';
 
     return (
         <AdminLayout>
@@ -162,7 +175,7 @@ export default function AdminProducts() {
                             </div>
                         )}
                     </div>
-                    <Link href={`/admin/products/create${tokenQuery}`}>
+                    <Link href={`/admin/products/create`}>
                         <Button>Add New Product</Button>
                     </Link>
                 </div>
@@ -343,7 +356,7 @@ export default function AdminProducts() {
                                                 </td>
                                                 <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
                                                     <div className="flex justify-end gap-2">
-                                                        <Link href={`/admin/products/edit${tokenQuery ? tokenQuery + '&' : '?'}id=${product.uuid}`}>
+                                                        <Link href={`/admin/products/edit?id=${product.uuid}`}>
                                                             <Button variant="outline" size="sm">Edit</Button>
                                                         </Link>
                                                         <Button

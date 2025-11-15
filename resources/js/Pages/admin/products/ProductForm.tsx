@@ -121,10 +121,26 @@ export default function ProductForm() {
         }
     };
 
+    // Remove token from URL immediately - use localStorage/cookies only
+    useEffect(() => {
+        try {
+            const url = new URL(window.location.href);
+            if (url.searchParams.has('token')) {
+                // Extract token and save to localStorage if not already there
+                const token = url.searchParams.get('token');
+                if (token && !localStorage.getItem('admin_token')) {
+                    localStorage.setItem('admin_token', token);
+                }
+                // Remove token from URL immediately
+                url.searchParams.delete('token');
+                window.history.replaceState({}, '', url.toString());
+            }
+        } catch (_) {}
+    }, []);
+
     const getToken = () => {
-        if (typeof window === 'undefined') return '';
-        const urlParams = new URLSearchParams(window.location.search);
-        return urlParams.get('token') || localStorage.getItem('admin_token') || '';
+        // Get token from localStorage/cookies only (not URL)
+        return localStorage.getItem('admin_token') || '';
     };
 
     const handleInputChange = (e) => {
@@ -387,8 +403,7 @@ export default function ProductForm() {
             });
 
             if (res.data && res.data.status) {
-                const tokenQuery = token ? `?token=${token}` : '';
-                router.visit(`/admin/products${tokenQuery}`);
+                router.visit('/admin/products');
             } else {
                 const errorData = res.data?.data?.errors || {};
                 setErrors(errorData);
@@ -434,8 +449,22 @@ export default function ProductForm() {
         }
     };
 
-    const tokenParam = getToken();
-    const tokenQuery = tokenParam ? `?token=${tokenParam}` : '';
+    // Remove token from URL immediately - use localStorage/cookies only
+    useEffect(() => {
+        try {
+            const url = new URL(window.location.href);
+            if (url.searchParams.has('token')) {
+                // Extract token and save to localStorage if not already there
+                const token = url.searchParams.get('token');
+                if (token && !localStorage.getItem('admin_token')) {
+                    localStorage.setItem('admin_token', token);
+                }
+                // Remove token from URL immediately
+                url.searchParams.delete('token');
+                window.history.replaceState({}, '', url.toString());
+            }
+        } catch (_) {}
+    }, []);
 
     if (loading && isEdit) {
         return (
@@ -453,7 +482,7 @@ export default function ProductForm() {
             <Head title={isEdit ? 'Edit Product' : 'Create Product'} />
             <div className="p-4 sm:p-6 lg:p-8">
                 <div className="mb-6">
-                    <Link href={`/admin/products${tokenQuery}`} className="text-primary-600 hover:text-primary-700 mb-4 inline-block">
+                    <Link href={`/admin/products`} className="text-primary-600 hover:text-primary-700 mb-4 inline-block">
                         ← Back to Products
                     </Link>
                     <Heading level={1}>{isEdit ? 'Edit Product' : 'Create New Product'}</Heading>
@@ -697,7 +726,7 @@ export default function ProductForm() {
                                     <Button type="submit" block disabled={loading}>
                                         {loading ? 'Saving...' : isEdit ? 'Update Product' : 'Create Product'}
                                     </Button>
-                                    <Link href={`/admin/products${tokenQuery}`}>
+                                    <Link href={`/admin/products`}>
                                         <Button variant="outline" block>Cancel</Button>
                                     </Link>
                                 </div>
