@@ -23,8 +23,10 @@ export default function ProductDetail() {
         if (uuid) {
             axios.post('/api/user/products/show', { id: uuid })
                 .then(response => {
-                    if (response.data.success) {
+                    if (response.data.status && response.data.data) {
                         setProduct(response.data.data);
+                    } else {
+                        console.error('Product not found or invalid response:', response.data);
                     }
                     setLoading(false);
                 })
@@ -78,6 +80,15 @@ export default function ProductDetail() {
 
     const handleBuyNow = () => {
         if (!product) return;
+        
+        // Check if user is logged in
+        if (!user) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const uuid = urlParams.get('uuid');
+            const redirectUrl = uuid ? `/product?uuid=${uuid}` : '/product';
+            window.location.href = `/login?redirect=${encodeURIComponent(redirectUrl)}`;
+            return;
+        }
         
         setAddingToCart(true);
         setCartMessage('');

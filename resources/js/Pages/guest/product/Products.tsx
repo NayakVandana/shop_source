@@ -87,6 +87,13 @@ export default function Products() {
 	};
 
 	const handleBuyNow = (productId) => {
+		// Check if user is logged in
+		if (!user) {
+			const currentUrl = window.location.pathname + window.location.search;
+			window.location.href = `/login?redirect=${encodeURIComponent(currentUrl)}`;
+			return;
+		}
+		
 		setAddingToCart(prev => ({ ...prev, [productId]: true }));
 		setCartMessages(prev => ({ ...prev, [productId]: '' }));
 
@@ -166,12 +173,12 @@ export default function Products() {
 						<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 md:gap-6 lg:grid-cols-3 xl:grid-cols-4">
 							{products.map((product) => (
 								<Card key={product.uuid || product.id} className="overflow-hidden transition-shadow hover:shadow-lg flex flex-col h-full">
-									<div className="aspect-w-16 aspect-h-9 bg-gray-200 flex-shrink-0 relative">
+									<Link href={`/product?uuid=${product.uuid || product.id}`} className="aspect-w-16 aspect-h-9 bg-gray-200 flex-shrink-0 relative cursor-pointer">
 										{product.primary_image_url || product.image ? (
 											<img 
 												src={product.primary_image_url || product.image} 
 												alt={product.name} 
-												className="w-full h-40 sm:h-48 object-cover"
+												className="w-full h-40 sm:h-48 object-cover transition-transform hover:scale-105"
 												loading="lazy"
 												onError={(e) => {
 													e.target.src = '/images/placeholder.svg';
@@ -187,9 +194,11 @@ export default function Products() {
 												{product.discount_info.display_text}
 											</div>
 										)}
-									</div>
+									</Link>
 									<div className="p-4 sm:p-5 md:p-6 flex flex-col flex-1">
-										<Heading level={3} className="mb-2 text-lg sm:text-xl md:text-2xl line-clamp-2">{product.name}</Heading>
+										<Link href={`/product?uuid=${product.uuid || product.id}`}>
+											<Heading level={3} className="mb-2 text-lg sm:text-xl md:text-2xl line-clamp-2 hover:text-indigo-600 transition-colors cursor-pointer">{product.name}</Heading>
+										</Link>
 										<Text size="sm" className="mb-4 line-clamp-2 text-xs sm:text-sm flex-grow">{product.description || product.short_description}</Text>
 										<div className="flex flex-col gap-3 sm:gap-4 mt-auto">
 											<div className="flex flex-col">
