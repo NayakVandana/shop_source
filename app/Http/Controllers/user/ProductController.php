@@ -13,7 +13,7 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         try {
-            $query = Product::with(['category', 'media'])->where('is_active', true);
+            $query = Product::with(['category', 'media', 'discounts'])->where('is_active', true);
 
             // Search
             if ($request->has('search')) {
@@ -80,7 +80,7 @@ class ProductController extends Controller
                 'id' => 'required|string'
             ]);
 
-            $product = Product::with(['category', 'media'])
+            $product = Product::with(['category', 'media', 'discounts'])
                 ->where('is_active', true)
                 ->where('uuid', $data['id'])
                 ->firstOrFail();
@@ -97,7 +97,7 @@ class ProductController extends Controller
     public function featured(Request $request)
     {
         try {
-            $products = Product::with(['category', 'media'])
+            $products = Product::with(['category', 'media', 'discounts'])
                 ->where('is_active', true)
                 ->where('is_featured', true)
                 ->orderBy('created_at', 'desc')
@@ -119,7 +119,7 @@ class ProductController extends Controller
 
             $product = Product::where('uuid', $data['id'])->firstOrFail();
             
-            $relatedProducts = Product::with(['category', 'media'])
+            $relatedProducts = Product::with(['category', 'media', 'discounts'])
                 ->where('is_active', true)
                 ->where('uuid', '!=', $data['id'])
                 ->where('category_id', $product->category_id)

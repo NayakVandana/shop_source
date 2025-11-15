@@ -92,6 +92,53 @@ class AuthController extends Controller
                 }
             }
 
+            // Merge guest cart with user cart after login
+            try {
+                $sessionId = null;
+                if ($request->hasSession()) {
+                    $sessionId = $request->session()->getId();
+                }
+                if (!$sessionId) {
+                    $sessionId = $request->cookie('cart_session_id');
+                }
+
+                if ($sessionId) {
+                    $userCart = \App\Models\Cart::firstOrCreate(
+                        ['user_id' => $user->id],
+                        ['session_id' => $sessionId]
+                    );
+
+                    $guestCart = \App\Models\Cart::with('items')->where('session_id', $sessionId)
+                        ->whereNull('user_id')
+                        ->where('id', '!=', $userCart->id)
+                        ->first();
+
+                    if ($guestCart && $guestCart->items && $guestCart->items->isNotEmpty()) {
+                        foreach ($guestCart->items as $guestItem) {
+                            $existingItem = \App\Models\CartItem::where('cart_id', $userCart->id)
+                                ->where('product_id', $guestItem->product_id)
+                                ->first();
+
+                            if ($existingItem) {
+                                $existingItem->update([
+                                    'quantity' => $existingItem->quantity + $guestItem->quantity,
+                                    'price' => $guestItem->price,
+                                    'discount_amount' => $guestItem->discount_amount,
+                                ]);
+                            } else {
+                                $guestItem->update(['cart_id' => $userCart->id]);
+                            }
+                        }
+
+                        $guestCart->items()->delete();
+                        $guestCart->delete();
+                    }
+                }
+            } catch (\Exception $e) {
+                // Silently fail cart merge - don't break login
+                \Log::warning('Failed to merge cart on login: ' . $e->getMessage());
+            }
+
             // Placeholder: Dispatch UserLoggedin event
             // UserLoggedin::dispatch($user);
 

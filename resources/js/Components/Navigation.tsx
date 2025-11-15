@@ -1,9 +1,11 @@
 // @ts-nocheck
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from '@inertiajs/react';
+import axios from 'axios';
 import Button from './ui/Button';
 
 export default function Navigation({ user }) {
+    const [cartCount, setCartCount] = useState(0);
     // Only allow admin view for admins
     const isAdmin = user && user.name && (user.is_admin === true || user.role === 'admin');
 
@@ -111,6 +113,49 @@ export default function Navigation({ user }) {
     const adminToken = isAdmin ? localStorage.getItem('admin_token') : null;
     const adminPanelUrl = adminToken ? `/admin/dashboard?token=${adminToken}` : '/admin/dashboard';
 
+    // Load cart count
+    useEffect(() => {
+        const loadCartCount = () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token') || localStorage.getItem('auth_token') || '';
+
+            axios.post('/api/user/cart/index', {}, {
+                headers: token ? {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                } : {
+                    'Content-Type': 'application/json'
+                },
+                withCredentials: true
+            })
+            .then(response => {
+                if (response.data.status || response.data.success) {
+                    const cart = response.data.data?.cart || response.data.data;
+                    const totalItems = cart?.total_items || cart?.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0;
+                    setCartCount(totalItems);
+                }
+            })
+            .catch(error => {
+                // Silently fail - cart might be empty
+                setCartCount(0);
+            });
+        };
+
+        loadCartCount();
+        
+        // Refresh cart count every 5 seconds
+        const interval = setInterval(loadCartCount, 5000);
+        
+        // Also listen for cart updates from other tabs/windows
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'cart_updated') {
+                loadCartCount();
+            }
+        });
+
+        return () => clearInterval(interval);
+    }, []);
+
     // Logout handler
     const handleLogout = async () => {
         try {
@@ -187,6 +232,19 @@ export default function Navigation({ user }) {
 							className="text-text-primary hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium"
 						>
 							Products
+						</Link>
+						<Link
+							href="/cart"
+							className="relative text-text-primary hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium"
+						>
+							<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+							</svg>
+							{cartCount > 0 && (
+								<span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+									{cartCount > 99 ? '99+' : cartCount}
+								</span>
+							)}
 						</Link>
 						{user && user.name ? (
 							<div className="flex items-center space-x-4">
@@ -278,6 +336,21 @@ export default function Navigation({ user }) {
 						onClick={() => setIsMobileOpen(false)}
 					>
 						Products
+					</Link>
+					<Link
+						href="/cart"
+						className="relative block text-text-primary hover:text-primary-600 hover:bg-secondary-50 active:bg-secondary-100 px-3 py-3 rounded-md text-base font-medium touch-manipulation min-h-[44px] flex items-center"
+						onClick={() => setIsMobileOpen(false)}
+					>
+						<svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+						</svg>
+						Cart
+						{cartCount > 0 && (
+							<span className="ml-2 bg-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+								{cartCount > 99 ? '99+' : cartCount}
+							</span>
+						)}
 					</Link>
 
 					{user && user.name ? (

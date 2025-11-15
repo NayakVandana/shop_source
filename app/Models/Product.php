@@ -38,6 +38,8 @@ class Product extends Model
         'primary_image_url',
         'video_urls',
         'primary_video_url',
+        'discount_info',
+        'final_price',
     ];
 
     protected static function boot()
@@ -66,6 +68,15 @@ class Product extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    /**
+     * Get the discounts associated with this product
+     */
+    public function discounts(): BelongsToMany
+    {
+        return $this->belongsToMany(Discount::class, 'discount_product')
+            ->withTimestamps();
     }
 
     /**
@@ -126,6 +137,89 @@ class Product extends Model
         }
 
         return round((($this->price - $this->sale_price) / $this->price) * 100, 2);
+    }
+
+    /**
+     * Get the best active discount for this product
+     */
+    public function getBestDiscount()
+    {
+        if (!$this->relationLoaded('discounts')) {
+            $this->load('discounts');
+        }
+
+        $validDiscounts = $this->discounts->filter(function ($discount) {
+            return $discount->isValid();
+        });
+
+        if ($validDiscounts->isEmpty()) {
+            return null;
+        }
+
+        // Get the discount with the highest value
+        // Use sale_price if available, otherwise use regular price
+        $basePrice = $this->sale_price ?? $this->price;
+        $bestDiscount = $validDiscounts->sortByDesc(function ($discount) use ($basePrice) {
+            return $discount->calculateDiscount($basePrice);
+        })->first();
+
+        return $bestDiscount;
+    }
+
+    /**
+     * Get the final price after applying the best discount
+     */
+    public function getFinalPriceAttribute(): float
+    {
+        $basePrice = $this->sale_price ?? $this->price;
+        $bestDiscount = $this->getBestDiscount();
+
+        if ($bestDiscount) {
+            $discountAmount = $bestDiscount->calculateDiscount($basePrice);
+            return max(0, $basePrice - $discountAmount);
+        }
+
+        return $basePrice;
+    }
+
+    /**
+     * Get discount information for display
+     */
+    protected function discountInfo(): Attribute
+    {
+        return new Attribute(
+            get: function () {
+                // Ensure discounts are loaded
+                if (!$this->relationLoaded('discounts')) {
+                    $this->load('discounts');
+                }
+
+                $bestDiscount = $this->getBestDiscount();
+                
+                if (!$bestDiscount) {
+                    return null;
+                }
+
+                $basePrice = $this->sale_price ?? $this->price;
+                $discountAmount = $bestDiscount->calculateDiscount($basePrice);
+                $finalPrice = max(0, $basePrice - $discountAmount);
+
+                return [
+                    'discount_id' => $bestDiscount->id,
+                    'discount_uuid' => $bestDiscount->uuid,
+                    'discount_name' => $bestDiscount->name,
+                    'discount_type' => $bestDiscount->type,
+                    'discount_value' => (float) $bestDiscount->value,
+                    'discount_amount' => (float) $discountAmount,
+                    'original_price' => (float) $basePrice,
+                    'final_price' => (float) $finalPrice,
+                    'discount_percentage' => $basePrice > 0 ? round(($discountAmount / $basePrice) * 100, 2) : 0,
+                    'display_text' => $bestDiscount->type === 'percentage' 
+                        ? number_format($bestDiscount->value, 2) . "% OFF" 
+                        : "$" . number_format($bestDiscount->value, 2) . " OFF",
+                ];
+            }
+        );
     }
 
     public function getRouteKeyName()

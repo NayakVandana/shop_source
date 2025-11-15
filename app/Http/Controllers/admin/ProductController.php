@@ -19,7 +19,7 @@ class ProductController extends Controller
     public function index(Request $request): Response
     {
         try {
-            $query = Product::with(['category', 'media']);
+            $query = Product::with(['category', 'media', 'discounts']);
             
             // Search functionality
             if ($request->has('search')) {
@@ -197,7 +197,7 @@ class ProductController extends Controller
                 $product->storeVideos($request->file('videos'));
             }
 
-            $product->load(['category', 'media']);
+            $product->load(['category', 'media', 'discounts']);
 
             return $this->sendJsonResponse(true, 'Product created successfully', $product, 201);
             
@@ -216,7 +216,7 @@ class ProductController extends Controller
                 'id' => 'required|string'
             ]);
 
-            $product = Product::with(['category', 'media'])->where('uuid', $data['id'])->firstOrFail();
+            $product = Product::with(['category', 'media', 'discounts'])->where('uuid', $data['id'])->firstOrFail();
             
             return $this->sendJsonResponse(true, 'Product retrieved successfully', $product);
             
@@ -294,7 +294,7 @@ class ProductController extends Controller
             }
 
             $product->update($updateData);
-            $product->load(['category', 'media']);
+            $product->load(['category', 'media', 'discounts']);
 
             return $this->sendJsonResponse(true, 'Product updated successfully', $product);
             

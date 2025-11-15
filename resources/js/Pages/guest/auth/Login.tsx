@@ -42,12 +42,18 @@ export default function Login() {
                 if (data.data && data.data.access_token) {
                     localStorage.setItem('auth_token', data.data.access_token);
                 }
-                // Redirect to products page by default (include token if present)
+                // Redirect to intended page or products page
                 const token = data.data?.access_token || '';
+                const urlParams = new URLSearchParams(window.location.search);
+                const redirect = urlParams.get('redirect') || '/products';
+                
+                // Notify cart to refresh (cart will be merged on backend)
+                localStorage.setItem('cart_updated', Date.now().toString());
+                
                 if (token) {
-                    window.location.href = `/products?token=${token}`;
+                    window.location.href = `${redirect}?token=${token}`;
                 } else {
-                    window.location.href = '/products';
+                    window.location.href = redirect;
                 }
             } else {
                 // Show error messages

@@ -82,6 +82,28 @@ export default function AdminLayout({ children, is404 = false }) {
                             </Link>
                         )}
                         
+                        {/* Discounts - Check for products:view permission */}
+                        {canViewModule(user, 'products') && (
+                            <Link
+                                href={`/admin/discounts${tokenParam}`}
+                                className="block px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors touch-manipulation min-h-[44px] flex items-center"
+                                onClick={() => setSidebarOpen(false)}
+                            >
+                                Discounts
+                            </Link>
+                        )}
+                        
+                        {/* Coupon Codes - Check for products:view permission */}
+                        {canViewModule(user, 'products') && (
+                            <Link
+                                href={`/admin/coupon-codes${tokenParam}`}
+                                className="block px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors touch-manipulation min-h-[44px] flex items-center"
+                                onClick={() => setSidebarOpen(false)}
+                            >
+                                Coupon Codes
+                            </Link>
+                        )}
+                        
                         {/* Categories - Check for categories:view permission */}
                         {canViewModule(user, 'categories') && (
                             <Link

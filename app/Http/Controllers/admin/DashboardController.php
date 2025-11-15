@@ -58,7 +58,7 @@ class DashboardController extends Controller
                 'out_of_stock_products' => $outOfStockProducts,
             ];
 
-            $recent_products = Product::with(['category', 'media'])
+            $recent_products = Product::with(['category', 'media', 'discounts'])
                 ->latest()
                 ->limit(5)
                 ->get()

@@ -48,5 +48,25 @@ use Illuminate\Support\Facades\Route;
         Route::post('/users/update', [\App\Http\Controllers\admin\UserController::class, 'update']);
         Route::post('/users/destroy', [\App\Http\Controllers\admin\UserController::class, 'destroy']);
         
+        // Discounts
+        Route::post('/discounts/index', [\App\Http\Controllers\admin\DiscountController::class, 'index']);
+        Route::post('/discounts/store', [\App\Http\Controllers\admin\DiscountController::class, 'store']);
+        Route::post('/discounts/show', [\App\Http\Controllers\admin\DiscountController::class, 'show']);
+        Route::post('/discounts/update', [\App\Http\Controllers\admin\DiscountController::class, 'update']);
+        Route::post('/discounts/destroy', [\App\Http\Controllers\admin\DiscountController::class, 'destroy']);
+        
+        // Coupon Codes
+        Route::post('/coupon-codes/index', [\App\Http\Controllers\admin\CouponCodeController::class, 'index']);
+        Route::post('/coupon-codes/store', [\App\Http\Controllers\admin\CouponCodeController::class, 'store']);
+        Route::post('/coupon-codes/show', [\App\Http\Controllers\admin\CouponCodeController::class, 'show']);
+        Route::post('/coupon-codes/update', [\App\Http\Controllers\admin\CouponCodeController::class, 'update']);
+        Route::post('/coupon-codes/destroy', [\App\Http\Controllers\admin\CouponCodeController::class, 'destroy']);
+        
+        // Orders
+        Route::post('/orders/index', [\App\Http\Controllers\admin\OrderController::class, 'index']);
+        Route::post('/orders/show', [\App\Http\Controllers\admin\OrderController::class, 'show']);
+        Route::post('/orders/update-status', [\App\Http\Controllers\admin\OrderController::class, 'updateStatus']);
+        Route::post('/orders/update', [\App\Http\Controllers\admin\OrderController::class, 'update']);
+        
     });
 

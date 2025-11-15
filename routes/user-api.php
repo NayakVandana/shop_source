@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\auth\AuthController;
 use App\Http\Controllers\user\ProductController as UserProductController;
+use App\Http\Controllers\user\CartController;
+use App\Http\Controllers\user\OrderController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -16,12 +18,26 @@ use Illuminate\Support\Facades\Route;
     Route::post('/products/featured', [UserProductController::class, 'featured']);
     Route::post('/products/related', [UserProductController::class, 'related']);
 
+    // Cart Routes (Public - works with session for guests)
+    Route::middleware([\Illuminate\Session\Middleware\StartSession::class])->group(function () {
+        Route::post('/cart/index', [CartController::class, 'index']);
+        Route::post('/cart/add', [CartController::class, 'add']);
+        Route::post('/cart/update', [CartController::class, 'update']);
+        Route::post('/cart/remove', [CartController::class, 'remove']);
+        Route::post('/cart/clear', [CartController::class, 'clear']);
+    });
+
     // Protected User Routes
     Route::middleware(['user.verify', 'uuid.validate'])->group(function () {
         
         // Authentication
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::post('/profile', [AuthController::class, 'profile']);
+        
+        // Orders
+        Route::post('/orders/index', [OrderController::class, 'index']);
+        Route::post('/orders/store', [OrderController::class, 'store']);
+        Route::post('/orders/show', [OrderController::class, 'show']);
         
     });
 

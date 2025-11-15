@@ -18,7 +18,7 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         try {
-            $query = Product::with(['category', 'media']);
+            $query = Product::with(['category', 'media', 'discounts']);
             
             // Search functionality
             if ($request->has('search')) {
@@ -123,7 +123,7 @@ class ProductController extends Controller
                 'id' => 'required|string'
             ]);
 
-            $product = Product::with(['category', 'media'])->where('uuid', $data['id'])->firstOrFail();
+            $product = Product::with(['category', 'media', 'discounts'])->where('uuid', $data['id'])->firstOrFail();
             
             return $this->sendJsonResponse(true, 'Product retrieved successfully', $product);
             

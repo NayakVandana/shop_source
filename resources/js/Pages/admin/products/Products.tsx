@@ -309,10 +309,22 @@ export default function AdminProducts() {
                                                     {product.category?.name || 'N/A'}
                                                 </td>
                                                 <td className="px-4 py-3 text-sm text-gray-900">
-                                                    ${product.price}
-                                                    {product.sale_price && (
-                                                        <div className="text-xs text-red-600">Sale: ${product.sale_price}</div>
-                                                    )}
+                                                    <div className="flex flex-col">
+                                                        {product.discount_info ? (
+                                                            <>
+                                                                <span className="text-xs text-gray-400 line-through">${product.discount_info.original_price}</span>
+                                                                <span className="text-red-600 font-semibold">${product.discount_info.final_price}</span>
+                                                                <span className="text-xs text-green-600 font-medium">{product.discount_info.display_text}</span>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <span>${product.price}</span>
+                                                                {product.sale_price && (
+                                                                    <span className="text-xs text-red-600">Sale: ${product.sale_price}</span>
+                                                                )}
+                                                            </>
+                                                        )}
+                                                    </div>
                                                 </td>
                                                 <td className="px-4 py-3 text-sm text-gray-500">
                                                     {product.stock_quantity || 0}

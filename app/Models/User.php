@@ -57,6 +57,22 @@ class User extends Authenticatable
         return $this->hasMany(UserPermission::class);
     }
 
+    /**
+     * Get user carts relationship
+     */
+    public function carts(): HasMany
+    {
+        return $this->hasMany(Cart::class);
+    }
+
+    /**
+     * Get user orders relationship
+     */
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
+    }
+
 
     public function getRouteKeyName()
     {

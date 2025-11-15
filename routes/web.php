@@ -22,6 +22,10 @@ Route::get('/product', function () {
     return Inertia::render('guest/product/ProductDetail');
 })->name('product');
 
+Route::get('/cart', function () {
+    return Inertia::render('guest/cart/Cart');
+})->name('cart');
+
 // Authentication Pages (Guest)
 Route::get('/login', function () {
     return Inertia::render('guest/auth/Login');
@@ -85,6 +89,32 @@ Route::get('/admin/permissions/bulk-create', function () {
 Route::get('/admin/users', function () {
     return Inertia::render('admin/users/Users');
 })->name('admin.users');
+
+// Admin Discounts (Protected)
+Route::get('/admin/discounts', function () {
+    return Inertia::render('admin/discounts/Discounts');
+})->name('admin.discounts');
+
+Route::get('/admin/discounts/create', function () {
+    return Inertia::render('admin/discounts/DiscountForm');
+})->name('admin.discounts.create');
+
+Route::get('/admin/discounts/edit', function () {
+    return Inertia::render('admin/discounts/DiscountForm');
+})->name('admin.discounts.edit');
+
+// Admin Coupon Codes (Protected)
+Route::get('/admin/coupon-codes', function () {
+    return Inertia::render('admin/coupon-codes/CouponCodes');
+})->name('admin.coupon-codes');
+
+Route::get('/admin/coupon-codes/create', function () {
+    return Inertia::render('admin/coupon-codes/CouponCodeForm');
+})->name('admin.coupon-codes.create');
+
+Route::get('/admin/coupon-codes/edit', function () {
+    return Inertia::render('admin/coupon-codes/CouponCodeForm');
+})->name('admin.coupon-codes.edit');
 
 // Fallback: render Inertia 404 page for any unknown web route
 Route::fallback(function () {
