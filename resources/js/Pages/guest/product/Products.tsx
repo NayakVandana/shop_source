@@ -5,7 +5,6 @@ import axios from 'axios';
 import UserLayout from '../../../Layouts/UserLayout';
 import GuestLayout from '../../../Layouts/GuestLayout';
 import Card from '../../../Components/ui/Card';
-import Button from '../../../Components/ui/Button';
 import { Heading, Text } from '../../../Components/ui/Typography';
 
 export default function Products() {
@@ -14,8 +13,6 @@ export default function Products() {
 	const [products, setProducts] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
-	const [addingToCart, setAddingToCart] = useState({});
-	const [cartMessages, setCartMessages] = useState({});
 
 	// Remove token from URL immediately - use localStorage/cookies only
 	useEffect(() => {
@@ -51,109 +48,6 @@ export default function Products() {
 				setLoading(false);
 			});
 	}, []);
-
-	const handleAddToCart = (productId) => {
-		setAddingToCart(prev => ({ ...prev, [productId]: true }));
-		setCartMessages(prev => ({ ...prev, [productId]: '' }));
-
-		// Get token from localStorage/cookies only (not URL)
-		const token = localStorage.getItem('auth_token') || '';
-
-		axios.post('/api/user/cart/add', {
-			product_id: productId,
-			quantity: 1
-		}, {
-			headers: token ? {
-				'Authorization': `Bearer ${token}`,
-				'Content-Type': 'application/json'
-			} : {
-				'Content-Type': 'application/json'
-			},
-			withCredentials: true
-		})
-		.then(response => {
-			if (response.data.status || response.data.success) {
-				setCartMessages(prev => ({ ...prev, [productId]: 'Added to cart!' }));
-				// Notify header to refresh cart count
-				localStorage.setItem('cart_updated', Date.now().toString());
-				setTimeout(() => {
-					setCartMessages(prev => {
-						const newMessages = { ...prev };
-						delete newMessages[productId];
-						return newMessages;
-					});
-				}, 3000);
-			} else {
-				setCartMessages(prev => ({ ...prev, [productId]: response.data.message || 'Failed to add to cart' }));
-			}
-			setAddingToCart(prev => {
-				const newState = { ...prev };
-				delete newState[productId];
-				return newState;
-			});
-		})
-		.catch(error => {
-			console.error('Error adding to cart:', error);
-			setCartMessages(prev => ({ ...prev, [productId]: error.response?.data?.message || 'Failed to add to cart' }));
-			setAddingToCart(prev => {
-				const newState = { ...prev };
-				delete newState[productId];
-				return newState;
-			});
-		});
-	};
-
-	const handleBuyNow = (productId) => {
-		// Check if user is logged in
-		if (!user) {
-			const currentUrl = window.location.pathname + window.location.search;
-			window.location.href = `/login?redirect=${encodeURIComponent(currentUrl)}`;
-			return;
-		}
-		
-		setAddingToCart(prev => ({ ...prev, [productId]: true }));
-		setCartMessages(prev => ({ ...prev, [productId]: '' }));
-
-		// Get token from localStorage/cookies only (not URL)
-		const token = localStorage.getItem('auth_token') || '';
-
-		axios.post('/api/user/cart/add', {
-			product_id: productId,
-			quantity: 1
-		}, {
-			headers: token ? {
-				'Authorization': `Bearer ${token}`,
-				'Content-Type': 'application/json'
-			} : {
-				'Content-Type': 'application/json'
-			},
-			withCredentials: true
-		})
-		.then(response => {
-			setAddingToCart(prev => {
-				const newState = { ...prev };
-				delete newState[productId];
-				return newState;
-			});
-			if (response.data.status || response.data.success) {
-				// Notify header to refresh cart count
-				localStorage.setItem('cart_updated', Date.now().toString());
-				// Redirect to cart page without token in URL
-				window.location.href = '/cart';
-			} else {
-				setCartMessages(prev => ({ ...prev, [productId]: response.data.message || 'Failed to add to cart' }));
-			}
-		})
-		.catch(error => {
-			console.error('Error adding to cart:', error);
-			setCartMessages(prev => ({ ...prev, [productId]: error.response?.data?.message || 'Failed to add to cart' }));
-			setAddingToCart(prev => {
-				const newState = { ...prev };
-				delete newState[productId];
-				return newState;
-			});
-		});
-	};
 
 	const renderContent = () => {
 		if (loading) {
@@ -236,36 +130,6 @@ export default function Products() {
 													</>
 												)}
 											</div>
-											
-											{cartMessages[product.id] && (
-												<div className={`text-xs p-2 rounded ${cartMessages[product.id].includes('success') ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
-													{cartMessages[product.id]}
-												</div>
-											)}
-
-											<div className="flex flex-col sm:flex-row gap-2">
-												<Button 
-													size="sm" 
-													variant="outline"
-													className="flex-1 touch-manipulation"
-													onClick={() => handleAddToCart(product.id)}
-													disabled={addingToCart[product.id] || !product.in_stock}
-												>
-													{addingToCart[product.id] ? 'Adding...' : 'Add to Cart'}
-												</Button>
-												<Button 
-													size="sm" 
-													className="flex-1 touch-manipulation"
-													onClick={() => handleBuyNow(product.id)}
-													disabled={addingToCart[product.id] || !product.in_stock}
-												>
-													{addingToCart[product.id] ? 'Adding...' : 'Buy Now'}
-												</Button>
-											</div>
-											
-											<Link href={`/product?uuid=${product.uuid || product.id}`} className="flex-shrink-0">
-												<Button size="sm" variant="outline" className="w-full touch-manipulation">View Details</Button>
-											</Link>
 										</div>
 									</div>
 								</Card>

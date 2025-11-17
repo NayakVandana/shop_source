@@ -5,21 +5,147 @@ namespace App\Http\Controllers\admin;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\Category;
+use App\Models\ProductSize;
+use App\Models\ProductColor;
+use App\Models\ProductMedia;
+use App\Helpers\MediaStorageService;
+use App\Helpers\ProductSizeHelper;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Http\UploadedFile;
 use Exception;
 
 class ProductController extends Controller
 {
+
+    /**
+     * Store product images
+     */
+    protected function storeProductImages(Product $product, $uploadedImages, $setFirstAsPrimary = true)
+    {
+        if (!$uploadedImages) {
+            return [];
+        }
+
+        // Convert single file to array
+        if ($uploadedImages instanceof UploadedFile) {
+            $uploadedImages = [$uploadedImages];
+        }
+
+        $productSlug = $product->slug ?: 'products';
+        $mediaRecords = [];
+        
+        foreach ($uploadedImages as $index => $image) {
+            if ($image && $image->isValid()) {
+                // Store file using MediaStorageService
+                $mediaData = MediaStorageService::storeFile(
+                    $image,
+                    'image',
+                    'products',
+                    $productSlug
+                );
+
+                // Create media record
+                $mediaRecord = $product->media()->create([
+                    'type' => 'image',
+                    'file_path' => $mediaData['file_path'],
+                    'file_name' => $mediaData['file_name'],
+                    'mime_type' => $mediaData['mime_type'],
+                    'file_size' => $mediaData['file_size'],
+                    'disk' => $mediaData['disk'],
+                    'url' => $mediaData['url'],
+                    'sort_order' => $index,
+                    'is_primary' => $setFirstAsPrimary && $index === 0,
+                ]);
+
+                $mediaRecords[] = $mediaRecord;
+            }
+        }
+
+        return $mediaRecords;
+    }
+
+    /**
+     * Store product videos
+     */
+    protected function storeProductVideos(Product $product, $uploadedVideos, $setFirstAsPrimary = true)
+    {
+        if (!$uploadedVideos) {
+            return [];
+        }
+
+        // Convert single file to array
+        if ($uploadedVideos instanceof UploadedFile) {
+            $uploadedVideos = [$uploadedVideos];
+        }
+
+        $productSlug = $product->slug ?: 'products';
+        $mediaRecords = [];
+        
+        foreach ($uploadedVideos as $index => $video) {
+            if ($video && $video->isValid()) {
+                // Store file using MediaStorageService
+                $mediaData = MediaStorageService::storeFile(
+                    $video,
+                    'video',
+                    'products',
+                    $productSlug
+                );
+
+                // Create media record
+                $mediaRecord = $product->media()->create([
+                    'type' => 'video',
+                    'file_path' => $mediaData['file_path'],
+                    'file_name' => $mediaData['file_name'],
+                    'mime_type' => $mediaData['mime_type'],
+                    'file_size' => $mediaData['file_size'],
+                    'disk' => $mediaData['disk'],
+                    'url' => $mediaData['url'],
+                    'sort_order' => $index,
+                    'is_primary' => $setFirstAsPrimary && $index === 0,
+                ]);
+
+                $mediaRecords[] = $mediaRecord;
+            }
+        }
+
+        return $mediaRecords;
+    }
+
+    /**
+     * Delete product images
+     */
+    protected function deleteProductImages(Product $product)
+    {
+        $mediaImages = $product->imagesMedia()->get();
+        foreach ($mediaImages as $media) {
+            MediaStorageService::deleteFile($media->file_path, $media->disk);
+            $media->delete();
+        }
+    }
+
+    /**
+     * Delete product videos
+     */
+    protected function deleteProductVideos(Product $product)
+    {
+        $mediaVideos = $product->videosMedia()->get();
+        foreach ($mediaVideos as $media) {
+            MediaStorageService::deleteFile($media->file_path, $media->disk);
+            $media->delete();
+        }
+    }
+
     /**
      * Display a listing of products
      */
     public function index(Request $request): Response
     {
         try {
-            $query = Product::with(['category', 'media', 'discounts']);
+            $query = Product::with(['category', 'media', 'discounts', 'sizes', 'colors']);
             
             // Search functionality
             if ($request->has('search')) {
@@ -113,17 +239,6 @@ class ProductController extends Controller
                   });
             })->count();
             
-            // Add counts to pagination response
-            $products->appends([
-                'counts' => [
-                    'total' => $totalCount,
-                    'active' => $activeCount,
-                    'inactive' => $inactiveCount,
-                    'in_stock' => $inStockCount,
-                    'out_of_stock' => $outOfStockCount,
-                ]
-            ]);
-            
             // Return response with counts in data
             $responseData = $products->toArray();
             $responseData['counts'] = [
@@ -167,39 +282,82 @@ class ProductController extends Controller
                 'video' => 'nullable|mimes:mp4,avi,mov,wmv,flv,webm|max:10240',
                 'videos' => 'nullable|array',
                 'videos.*' => 'mimes:mp4,avi,mov,wmv,flv,webm|max:10240',
+                'sizes' => 'nullable|array',
+                'sizes.*.size' => 'required|string|max:50',
+                'sizes.*.stock_quantity' => 'required|integer|min:0',
+                'sizes.*.is_active' => 'boolean',
+                'sizes.*.sort_order' => 'nullable|integer|min:0',
+                'colors' => 'nullable|array',
+                'colors.*.color' => 'required|string|max:100',
+                'colors.*.color_code' => 'nullable|string|max:50',
+                'colors.*.stock_quantity' => 'required|integer|min:0',
+                'colors.*.is_active' => 'boolean',
+                'colors.*.sort_order' => 'nullable|integer|min:0',
             ]);
 
             if ($validator->fails()) {
                 return $this->sendJsonResponse(false, 'Validation failed', ['errors' => $validator->errors()], 422);
             }
 
-            $data = $request->except(['images', 'image', 'videos', 'video']);
+            $data = $request->except(['images', 'image', 'videos', 'video', 'sizes', 'colors']);
             
-            $product = Product::create($data);
-            
-            // Handle single image upload
-            if ($request->hasFile('image')) {
-                $product->storeImages($request->file('image'));
-            }
-            
-            // Handle multiple images upload
-            if ($request->hasFile('images')) {
-                $product->storeImages($request->file('images'));
-            }
+            DB::beginTransaction();
+            try {
+                $product = Product::create($data);
+                
+                // Handle sizes
+                if ($request->has('sizes') && is_array($request->sizes)) {
+                    foreach ($request->sizes as $index => $sizeData) {
+                        $product->sizes()->create([
+                            'size' => $sizeData['size'],
+                            'stock_quantity' => $sizeData['stock_quantity'] ?? 0,
+                            'is_active' => $sizeData['is_active'] ?? true,
+                            'sort_order' => $sizeData['sort_order'] ?? $index,
+                        ]);
+                    }
+                }
 
-            // Handle single video upload
-            if ($request->hasFile('video')) {
-                $product->storeVideos($request->file('video'));
-            }
-            
-            // Handle multiple videos upload
-            if ($request->hasFile('videos')) {
-                $product->storeVideos($request->file('videos'));
-            }
+                // Handle colors
+                if ($request->has('colors') && is_array($request->colors)) {
+                    foreach ($request->colors as $index => $colorData) {
+                        $product->colors()->create([
+                            'color' => $colorData['color'],
+                            'color_code' => $colorData['color_code'] ?? null,
+                            'stock_quantity' => $colorData['stock_quantity'] ?? 0,
+                            'is_active' => $colorData['is_active'] ?? true,
+                            'sort_order' => $colorData['sort_order'] ?? $index,
+                        ]);
+                    }
+                }
+                
+                // Handle single image upload
+                if ($request->hasFile('image')) {
+                    $this->storeProductImages($product, $request->file('image'));
+                }
+                
+                // Handle multiple images upload
+                if ($request->hasFile('images')) {
+                    $this->storeProductImages($product, $request->file('images'));
+                }
 
-            $product->load(['category', 'media', 'discounts']);
+                // Handle single video upload
+                if ($request->hasFile('video')) {
+                    $this->storeProductVideos($product, $request->file('video'));
+                }
+                
+                // Handle multiple videos upload
+                if ($request->hasFile('videos')) {
+                    $this->storeProductVideos($product, $request->file('videos'));
+                }
 
-            return $this->sendJsonResponse(true, 'Product created successfully', $product, 201);
+                DB::commit();
+                $product->load(['category', 'media', 'discounts', 'sizes', 'colors']);
+
+                return $this->sendJsonResponse(true, 'Product created successfully', $product, 201);
+            } catch (Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
             
         } catch (Exception $e) {
             return $this->sendError($e);
@@ -216,7 +374,7 @@ class ProductController extends Controller
                 'id' => 'required|string'
             ]);
 
-            $product = Product::with(['category', 'media', 'discounts'])->where('uuid', $data['id'])->firstOrFail();
+            $product = Product::with(['category', 'media', 'discounts', 'sizes', 'colors'])->where('uuid', $data['id'])->firstOrFail();
             
             return $this->sendJsonResponse(true, 'Product retrieved successfully', $product);
             
@@ -257,46 +415,134 @@ class ProductController extends Controller
                 'video' => 'nullable|mimes:mp4,avi,mov,wmv,flv,webm|max:10240',
                 'videos' => 'nullable|array',
                 'videos.*' => 'mimes:mp4,avi,mov,wmv,flv,webm|max:10240',
+                'sizes' => 'nullable|array',
+                'sizes.*.id' => 'nullable|exists:product_sizes,id',
+                'sizes.*.size' => 'required|string|max:50',
+                'sizes.*.stock_quantity' => 'required|integer|min:0',
+                'sizes.*.is_active' => 'boolean',
+                'sizes.*.sort_order' => 'nullable|integer|min:0',
+                'colors' => 'nullable|array',
+                'colors.*.id' => 'nullable|exists:product_colors,id',
+                'colors.*.color' => 'required|string|max:100',
+                'colors.*.color_code' => 'nullable|string|max:50',
+                'colors.*.stock_quantity' => 'required|integer|min:0',
+                'colors.*.is_active' => 'boolean',
+                'colors.*.sort_order' => 'nullable|integer|min:0',
             ]);
 
             if ($validator->fails()) {
                 return $this->sendJsonResponse(false, 'Validation failed', ['errors' => $validator->errors()], 422);
             }
 
-            $updateData = $request->except(['id', 'images', 'image', 'videos', 'video']);
+            $updateData = $request->except(['id', 'images', 'image', 'videos', 'video', 'sizes', 'colors']);
             
-            // Handle single image upload
-            if ($request->hasFile('image')) {
-                // Delete existing images
-                $product->deleteImages();
-                $product->storeImages($request->file('image'));
-            }
-            
-            // Handle multiple images upload
-            if ($request->hasFile('images')) {
-                // Delete existing images
-                $product->deleteImages();
-                $product->storeImages($request->file('images'));
-            }
+            DB::beginTransaction();
+            try {
+                // Handle sizes
+                if ($request->has('sizes')) {
+                    $existingSizeIds = [];
+                    
+                    foreach ($request->sizes as $index => $sizeData) {
+                        if (isset($sizeData['id'])) {
+                            // Update existing size
+                            $size = $product->sizes()->find($sizeData['id']);
+                            if ($size) {
+                                $size->update([
+                                    'size' => $sizeData['size'],
+                                    'stock_quantity' => $sizeData['stock_quantity'] ?? 0,
+                                    'is_active' => $sizeData['is_active'] ?? true,
+                                    'sort_order' => $sizeData['sort_order'] ?? $index,
+                                ]);
+                                $existingSizeIds[] = $size->id;
+                            }
+                        } else {
+                            // Create new size
+                            $newSize = $product->sizes()->create([
+                                'size' => $sizeData['size'],
+                                'stock_quantity' => $sizeData['stock_quantity'] ?? 0,
+                                'is_active' => $sizeData['is_active'] ?? true,
+                                'sort_order' => $sizeData['sort_order'] ?? $index,
+                            ]);
+                            $existingSizeIds[] = $newSize->id;
+                        }
+                    }
+                    
+                    // Delete sizes that are not in the request
+                    $product->sizes()->whereNotIn('id', $existingSizeIds)->delete();
+                }
 
-            // Handle single video upload
-            if ($request->hasFile('video')) {
-                // Delete existing videos
-                $product->deleteVideos();
-                $product->storeVideos($request->file('video'));
-            }
-            
-            // Handle multiple videos upload
-            if ($request->hasFile('videos')) {
-                // Delete existing videos
-                $product->deleteVideos();
-                $product->storeVideos($request->file('videos'));
-            }
+                // Handle colors
+                if ($request->has('colors')) {
+                    $existingColorIds = [];
+                    
+                    foreach ($request->colors as $index => $colorData) {
+                        if (isset($colorData['id'])) {
+                            // Update existing color
+                            $color = $product->colors()->find($colorData['id']);
+                            if ($color) {
+                                $color->update([
+                                    'color' => $colorData['color'],
+                                    'color_code' => $colorData['color_code'] ?? null,
+                                    'stock_quantity' => $colorData['stock_quantity'] ?? 0,
+                                    'is_active' => $colorData['is_active'] ?? true,
+                                    'sort_order' => $colorData['sort_order'] ?? $index,
+                                ]);
+                                $existingColorIds[] = $color->id;
+                            }
+                        } else {
+                            // Create new color
+                            $newColor = $product->colors()->create([
+                                'color' => $colorData['color'],
+                                'color_code' => $colorData['color_code'] ?? null,
+                                'stock_quantity' => $colorData['stock_quantity'] ?? 0,
+                                'is_active' => $colorData['is_active'] ?? true,
+                                'sort_order' => $colorData['sort_order'] ?? $index,
+                            ]);
+                            $existingColorIds[] = $newColor->id;
+                        }
+                    }
+                    
+                    // Delete colors that are not in the request
+                    $product->colors()->whereNotIn('id', $existingColorIds)->delete();
+                }
+                
+                // Handle single image upload
+                if ($request->hasFile('image')) {
+                    // Delete existing images
+                    $this->deleteProductImages($product);
+                    $this->storeProductImages($product, $request->file('image'));
+                }
+                
+                // Handle multiple images upload
+                if ($request->hasFile('images')) {
+                    // Delete existing images
+                    $this->deleteProductImages($product);
+                    $this->storeProductImages($product, $request->file('images'));
+                }
 
-            $product->update($updateData);
-            $product->load(['category', 'media', 'discounts']);
+                // Handle single video upload
+                if ($request->hasFile('video')) {
+                    // Delete existing videos
+                    $this->deleteProductVideos($product);
+                    $this->storeProductVideos($product, $request->file('video'));
+                }
+                
+                // Handle multiple videos upload
+                if ($request->hasFile('videos')) {
+                    // Delete existing videos
+                    $this->deleteProductVideos($product);
+                    $this->storeProductVideos($product, $request->file('videos'));
+                }
 
-            return $this->sendJsonResponse(true, 'Product updated successfully', $product);
+                $product->update($updateData);
+                DB::commit();
+                $product->load(['category', 'media', 'discounts', 'sizes', 'colors']);
+
+                return $this->sendJsonResponse(true, 'Product updated successfully', $product);
+            } catch (Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
             
         } catch (Exception $e) {
             return $this->sendError($e);
@@ -316,10 +562,8 @@ class ProductController extends Controller
             $product = Product::where('uuid', $data['id'])->firstOrFail();
 
             // Delete associated media (images and videos)
-            // This is handled automatically by the model's boot method,
-            // but we can call explicitly if needed
-            $product->deleteImages();
-            $product->deleteVideos();
+            $this->deleteProductImages($product);
+            $this->deleteProductVideos($product);
             
             $product->delete();
 

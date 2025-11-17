@@ -21,6 +21,7 @@ class ProductMedia extends Model
         'url',
         'sort_order',
         'is_primary',
+        'color',
     ];
 
     protected $casts = [

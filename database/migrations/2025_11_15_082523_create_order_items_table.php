@@ -17,6 +17,8 @@ return new class extends Migration
             $table->foreignId('product_id')->constrained()->onDelete('restrict');
             $table->string('product_name'); // Store product name at time of order
             $table->string('product_sku')->nullable();
+            $table->string('size', 50)->nullable(); // Product size at time of order
+            $table->string('color', 100)->nullable(); // Product color at time of order
             $table->integer('quantity');
             $table->decimal('price', 10, 2); // Price at time of order
             $table->decimal('discount_amount', 10, 2)->default(0);

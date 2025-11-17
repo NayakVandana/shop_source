@@ -23,6 +23,7 @@ return new class extends Migration
             $table->string('url')->nullable(); // Full URL to access the media
             $table->integer('sort_order')->default(0); // For ordering images/videos
             $table->boolean('is_primary')->default(false); // Primary image/video
+            $table->string('color', 100)->nullable(); // Associated color for this media (optional)
             $table->timestamps();
 
             // Indexes for better performance

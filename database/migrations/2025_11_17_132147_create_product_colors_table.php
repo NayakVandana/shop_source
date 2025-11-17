@@ -11,17 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('product_sizes', function (Blueprint $table) {
+        Schema::create('product_colors', function (Blueprint $table) {
             $table->id();
             $table->foreignId('product_id')->constrained()->onDelete('cascade');
-            $table->string('size', 50); // e.g., "S", "M", "L", "XL", "2T", "3T", "4T", etc.
+            $table->string('color', 100); // e.g., "Red", "Blue", "Black", "#FF0000", etc.
+            $table->string('color_code', 50)->nullable(); // Hex code like "#FF0000"
             $table->integer('stock_quantity')->default(0);
             $table->boolean('is_active')->default(true);
-            $table->integer('sort_order')->default(0); // For ordering sizes
+            $table->integer('sort_order')->default(0); // For ordering colors
             $table->timestamps();
             
-            // Ensure unique size per product
-            $table->unique(['product_id', 'size']);
+            // Ensure unique color per product
+            $table->unique(['product_id', 'color']);
             // Index for faster queries
             $table->index(['product_id', 'is_active']);
         });
@@ -32,6 +33,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('product_sizes');
+        Schema::dropIfExists('product_colors');
     }
 };

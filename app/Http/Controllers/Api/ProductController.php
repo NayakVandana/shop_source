@@ -5,13 +5,128 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\Category;
+use App\Models\ProductMedia;
+use App\Helpers\MediaStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Http\UploadedFile;
 use Exception;
 
 class ProductController extends Controller
 {
+    /**
+     * Store product images
+     */
+    protected function storeProductImages(Product $product, $uploadedImages, $setFirstAsPrimary = true)
+    {
+        if (!$uploadedImages) {
+            return [];
+        }
+
+        if ($uploadedImages instanceof UploadedFile) {
+            $uploadedImages = [$uploadedImages];
+        }
+
+        $productSlug = $product->slug ?: 'products';
+        $mediaRecords = [];
+        
+        foreach ($uploadedImages as $index => $image) {
+            if ($image && $image->isValid()) {
+                $mediaData = MediaStorageService::storeFile(
+                    $image,
+                    'image',
+                    'products',
+                    $productSlug
+                );
+
+                $mediaRecord = $product->media()->create([
+                    'type' => 'image',
+                    'file_path' => $mediaData['file_path'],
+                    'file_name' => $mediaData['file_name'],
+                    'mime_type' => $mediaData['mime_type'],
+                    'file_size' => $mediaData['file_size'],
+                    'disk' => $mediaData['disk'],
+                    'url' => $mediaData['url'],
+                    'sort_order' => $index,
+                    'is_primary' => $setFirstAsPrimary && $index === 0,
+                ]);
+
+                $mediaRecords[] = $mediaRecord;
+            }
+        }
+
+        return $mediaRecords;
+    }
+
+    /**
+     * Store product videos
+     */
+    protected function storeProductVideos(Product $product, $uploadedVideos, $setFirstAsPrimary = true)
+    {
+        if (!$uploadedVideos) {
+            return [];
+        }
+
+        if ($uploadedVideos instanceof UploadedFile) {
+            $uploadedVideos = [$uploadedVideos];
+        }
+
+        $productSlug = $product->slug ?: 'products';
+        $mediaRecords = [];
+        
+        foreach ($uploadedVideos as $index => $video) {
+            if ($video && $video->isValid()) {
+                $mediaData = MediaStorageService::storeFile(
+                    $video,
+                    'video',
+                    'products',
+                    $productSlug
+                );
+
+                $mediaRecord = $product->media()->create([
+                    'type' => 'video',
+                    'file_path' => $mediaData['file_path'],
+                    'file_name' => $mediaData['file_name'],
+                    'mime_type' => $mediaData['mime_type'],
+                    'file_size' => $mediaData['file_size'],
+                    'disk' => $mediaData['disk'],
+                    'url' => $mediaData['url'],
+                    'sort_order' => $index,
+                    'is_primary' => $setFirstAsPrimary && $index === 0,
+                ]);
+
+                $mediaRecords[] = $mediaRecord;
+            }
+        }
+
+        return $mediaRecords;
+    }
+
+    /**
+     * Delete product images
+     */
+    protected function deleteProductImages(Product $product)
+    {
+        $mediaImages = $product->imagesMedia()->get();
+        foreach ($mediaImages as $media) {
+            MediaStorageService::deleteFile($media->file_path, $media->disk);
+            $media->delete();
+        }
+    }
+
+    /**
+     * Delete product videos
+     */
+    protected function deleteProductVideos(Product $product)
+    {
+        $mediaVideos = $product->videosMedia()->get();
+        foreach ($mediaVideos as $media) {
+            MediaStorageService::deleteFile($media->file_path, $media->disk);
+            $media->delete();
+        }
+    }
+
     /**
      * Display a listing of the resource
      */
@@ -84,24 +199,24 @@ class ProductController extends Controller
             
             $product = Product::create($data);
             
-            // Handle image upload using new media system
+            // Handle image upload
             if ($request->hasFile('image')) {
-                $product->storeImages($request->file('image'));
+                $this->storeProductImages($product, $request->file('image'));
             }
             
             // Handle multiple images
             if ($request->hasFile('images')) {
-                $product->storeImages($request->file('images'));
+                $this->storeProductImages($product, $request->file('images'));
             }
             
             // Handle video upload
             if ($request->hasFile('video')) {
-                $product->storeVideos($request->file('video'));
+                $this->storeProductVideos($product, $request->file('video'));
             }
             
             // Handle multiple videos
             if ($request->hasFile('videos')) {
-                $product->storeVideos($request->file('videos'));
+                $this->storeProductVideos($product, $request->file('videos'));
             }
 
             $product->load(['category', 'media']);
@@ -165,28 +280,28 @@ class ProductController extends Controller
 
             $updateData = $request->except(['id', 'image', 'images', 'video', 'videos']);
             
-            // Handle image upload using new media system
+            // Handle image upload
             if ($request->hasFile('image')) {
-                $product->deleteImages();
-                $product->storeImages($request->file('image'));
+                $this->deleteProductImages($product);
+                $this->storeProductImages($product, $request->file('image'));
             }
             
             // Handle multiple images
             if ($request->hasFile('images')) {
-                $product->deleteImages();
-                $product->storeImages($request->file('images'));
+                $this->deleteProductImages($product);
+                $this->storeProductImages($product, $request->file('images'));
             }
             
             // Handle video upload
             if ($request->hasFile('video')) {
-                $product->deleteVideos();
-                $product->storeVideos($request->file('video'));
+                $this->deleteProductVideos($product);
+                $this->storeProductVideos($product, $request->file('video'));
             }
             
             // Handle multiple videos
             if ($request->hasFile('videos')) {
-                $product->deleteVideos();
-                $product->storeVideos($request->file('videos'));
+                $this->deleteProductVideos($product);
+                $this->storeProductVideos($product, $request->file('videos'));
             }
 
             $product->update($updateData);
@@ -211,9 +326,9 @@ class ProductController extends Controller
 
             $product = Product::where('uuid', $data['id'])->firstOrFail();
 
-            // Delete associated media (handled automatically by model, but explicit for clarity)
-            $product->deleteImages();
-            $product->deleteVideos();
+            // Delete associated media
+            $this->deleteProductImages($product);
+            $this->deleteProductVideos($product);
             
             $product->delete();
 

@@ -12,6 +12,9 @@ export default function ProductDetail() {
     const [product, setProduct] = useState(null);
     const [loading, setLoading] = useState(true);
     const [quantity, setQuantity] = useState(1);
+    const [selectedSize, setSelectedSize] = useState(null);
+    const [selectedColor, setSelectedColor] = useState(null);
+    const [currentImage, setCurrentImage] = useState(null);
     const [addingToCart, setAddingToCart] = useState(false);
     const [cartMessage, setCartMessage] = useState('');
 
@@ -41,7 +44,14 @@ export default function ProductDetail() {
             axios.post('/api/user/products/show', { id: uuid })
                 .then(response => {
                     if (response.data.status && response.data.data) {
-                        setProduct(response.data.data);
+                        const productData = response.data.data;
+                        setProduct(productData);
+                        // Debug: Log sizes to console
+                        if (productData.sizes) {
+                            console.log('Product sizes loaded:', productData.sizes);
+                        } else {
+                            console.log('Product has no sizes property');
+                        }
                     } else {
                         console.error('Product not found or invalid response:', response.data);
                     }
@@ -56,8 +66,137 @@ export default function ProductDetail() {
         }
     }, []);
 
+    // Auto-select first available size when product loads
+    useEffect(() => {
+        if (product && product.sizes && product.sizes.length > 0) {
+            // If no size is selected, try to auto-select first available size
+            if (!selectedSize) {
+                const firstAvailableSize = product.sizes.find(
+                    (sizeItem) => sizeItem.is_active && sizeItem.stock_quantity > 0
+                );
+                if (firstAvailableSize) {
+                    setSelectedSize(firstAvailableSize.size);
+                }
+            }
+            // If a size is selected, verify it's still available
+            else {
+                const currentSize = product.sizes.find(s => s.size === selectedSize);
+                if (!currentSize || !currentSize.is_active || currentSize.stock_quantity === 0) {
+                    // Current size is no longer available, find a new one
+                    const firstAvailableSize = product.sizes.find(
+                        (sizeItem) => sizeItem.is_active && sizeItem.stock_quantity > 0
+                    );
+                    if (firstAvailableSize) {
+                        setSelectedSize(firstAvailableSize.size);
+                    } else {
+                        // No available sizes, clear selection
+                        setSelectedSize(null);
+                    }
+                }
+            }
+        } else {
+            // Product has no sizes, clear selection
+            setSelectedSize(null);
+        }
+
+        // Auto-select first available color when product loads
+        if (product && product.colors && product.colors.length > 0) {
+            // If no color is selected, try to auto-select first available color
+            if (!selectedColor) {
+                const firstAvailableColor = product.colors.find(
+                    (colorItem) => colorItem.is_active && colorItem.stock_quantity > 0
+                );
+                if (firstAvailableColor) {
+                    setSelectedColor(firstAvailableColor.color);
+                }
+            }
+            // If a color is selected, verify it's still available
+            else {
+                const currentColor = product.colors.find(c => c.color === selectedColor);
+                if (!currentColor || !currentColor.is_active || currentColor.stock_quantity === 0) {
+                    // Current color is no longer available, find a new one
+                    const firstAvailableColor = product.colors.find(
+                        (colorItem) => colorItem.is_active && colorItem.stock_quantity > 0
+                    );
+                    if (firstAvailableColor) {
+                        setSelectedColor(firstAvailableColor.color);
+                    } else {
+                        // No available colors, clear selection
+                        setSelectedColor(null);
+                    }
+                }
+            }
+        } else {
+            // Product has no colors, clear selection
+            setSelectedColor(null);
+        }
+
+        // Update image based on selected color
+        if (product && product.media) {
+            const images = product.media.filter(m => m.type === 'image');
+            if (selectedColor && images.length > 0) {
+                // Try to find image for selected color
+                const colorImage = images.find(img => img.color && img.color.toLowerCase() === selectedColor.toLowerCase());
+                if (colorImage) {
+                    setCurrentImage(colorImage.url);
+                } else {
+                    // Fallback to primary image or first image
+                    const primaryImage = images.find(img => img.is_primary);
+                    setCurrentImage(primaryImage ? primaryImage.url : (images[0]?.url || product.primary_image_url || product.image));
+                }
+            } else {
+                // No color selected or no images, use primary/default
+                const primaryImage = images.find(img => img.is_primary);
+                setCurrentImage(primaryImage ? primaryImage.url : (images[0]?.url || product.primary_image_url || product.image));
+            }
+        } else if (product) {
+            setCurrentImage(product.primary_image_url || product.image);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [product, selectedColor]);
+
     const handleAddToCart = () => {
         if (!product) return;
+        
+        // Check if product has sizes
+        const hasSizes = product.sizes && Array.isArray(product.sizes) && product.sizes.length > 0;
+        
+        // If product has sizes, size is REQUIRED
+        if (hasSizes) {
+            if (!selectedSize || selectedSize === null || selectedSize === '') {
+                setCartMessage('Please select a size before adding to cart');
+                setAddingToCart(false);
+                return;
+            }
+            
+            // Verify the selected size exists in the product sizes
+            const sizeExists = product.sizes.some(s => s.size === selectedSize);
+            if (!sizeExists) {
+                setCartMessage('Selected size is not available. Please select a different size.');
+                setAddingToCart(false);
+                return;
+            }
+        }
+
+        // Check if product has colors
+        const hasColors = product.colors && Array.isArray(product.colors) && product.colors.length > 0;
+        
+        // If product has colors, color is REQUIRED
+        if (hasColors) {
+            if (!selectedColor || selectedColor === null || selectedColor === '') {
+                setCartMessage('Please select a color before adding to cart');
+                setAddingToCart(false);
+                return;
+            }
+            
+            // Verify the selected color exists in the product colors
+            const colorExists = product.colors.some(c => c.color === selectedColor);
+            if (!colorExists) {
+                setCartMessage('Selected color is not available. Please select a different color.');
+                setAddingToCart(false);
+                return;
+            }
+        }
         
         setAddingToCart(true);
         setCartMessage('');
@@ -65,9 +204,30 @@ export default function ProductDetail() {
         // Get token from localStorage/cookies only (not URL)
         const token = localStorage.getItem('auth_token') || '';
 
+        // Use UUID if available, otherwise use numeric ID
+        const productId = product.uuid || product.id;
+
+        // Final check: never send null size if product has sizes
+        const sizeToSend = hasSizes ? (selectedSize || null) : null;
+        const colorToSend = hasColors ? (selectedColor || null) : null;
+        
+        if (hasSizes && !sizeToSend) {
+            setCartMessage('Please select a size before adding to cart');
+            setAddingToCart(false);
+            return;
+        }
+
+        if (hasColors && !colorToSend) {
+            setCartMessage('Please select a color before adding to cart');
+            setAddingToCart(false);
+            return;
+        }
+
         axios.post('/api/user/cart/add', {
-            product_id: product.id,
-            quantity: quantity
+            product_id: productId,
+            quantity: quantity,
+            size: sizeToSend,
+            color: colorToSend
         }, {
             headers: token ? {
                 'Authorization': `Bearer ${token}`,
@@ -98,6 +258,18 @@ export default function ProductDetail() {
     const handleBuyNow = () => {
         if (!product) return;
         
+        // Check if product has sizes and size is required
+        if (product.sizes && product.sizes.length > 0 && !selectedSize) {
+            setCartMessage('Please select a size');
+            return;
+        }
+
+        // Check if product has colors and color is required
+        if (product.colors && product.colors.length > 0 && !selectedColor) {
+            setCartMessage('Please select a color');
+            return;
+        }
+        
         // Check if user is logged in
         if (!user) {
             const urlParams = new URLSearchParams(window.location.search);
@@ -107,15 +279,76 @@ export default function ProductDetail() {
             return;
         }
         
+        // Check if product has sizes
+        const hasSizes = product.sizes && Array.isArray(product.sizes) && product.sizes.length > 0;
+        
+        // If product has sizes, size is REQUIRED
+        if (hasSizes) {
+            if (!selectedSize || selectedSize === null || selectedSize === '') {
+                setCartMessage('Please select a size before buying');
+                setAddingToCart(false);
+                return;
+            }
+            
+            // Verify the selected size exists in the product sizes
+            const sizeExists = product.sizes.some(s => s.size === selectedSize);
+            if (!sizeExists) {
+                setCartMessage('Selected size is not available. Please select a different size.');
+                setAddingToCart(false);
+                return;
+            }
+        }
+
+        // Check if product has colors
+        const hasColors = product.colors && Array.isArray(product.colors) && product.colors.length > 0;
+        
+        // If product has colors, color is REQUIRED
+        if (hasColors) {
+            if (!selectedColor || selectedColor === null || selectedColor === '') {
+                setCartMessage('Please select a color before buying');
+                setAddingToCart(false);
+                return;
+            }
+            
+            // Verify the selected color exists in the product colors
+            const colorExists = product.colors.some(c => c.color === selectedColor);
+            if (!colorExists) {
+                setCartMessage('Selected color is not available. Please select a different color.');
+                setAddingToCart(false);
+                return;
+            }
+        }
+        
         setAddingToCart(true);
         setCartMessage('');
 
         // Get token from localStorage/cookies only (not URL)
         const token = localStorage.getItem('auth_token') || '';
 
+        // Use UUID if available, otherwise use numeric ID
+        const productId = product.uuid || product.id;
+
+        // Final check: never send null size if product has sizes
+        const sizeToSend = hasSizes ? (selectedSize || null) : null;
+        const colorToSend = hasColors ? (selectedColor || null) : null;
+        
+        if (hasSizes && !sizeToSend) {
+            setCartMessage('Please select a size before buying');
+            setAddingToCart(false);
+            return;
+        }
+
+        if (hasColors && !colorToSend) {
+            setCartMessage('Please select a color before buying');
+            setAddingToCart(false);
+            return;
+        }
+
         axios.post('/api/user/cart/add', {
-            product_id: product.id,
-            quantity: quantity
+            product_id: productId,
+            quantity: quantity,
+            size: sizeToSend,
+            color: colorToSend
         }, {
             headers: token ? {
                 'Authorization': `Bearer ${token}`,
@@ -215,11 +448,11 @@ export default function ProductDetail() {
                     <div className="flex flex-col md:flex-row">
                         <div className="w-full md:w-1/2 relative">
                             <div className="aspect-w-16 aspect-h-9 bg-gray-200">
-                                {product.primary_image_url || product.image ? (
+                                {currentImage ? (
                                     <img
-                                        src={product.primary_image_url || product.image}
+                                        src={currentImage}
                                         alt={product.name}
-                                        className="w-full h-64 sm:h-80 md:h-96 object-cover"
+                                        className="w-full h-64 sm:h-80 md:h-96 object-cover transition-opacity duration-300"
                                         onError={(e) => {
                                             e.target.src = '/images/placeholder.svg';
                                         }}
@@ -230,6 +463,42 @@ export default function ProductDetail() {
                                     </div>
                                 )}
                             </div>
+                            {/* Image Gallery - Show all images for selected color or all images */}
+                            {product.media && product.media.filter(m => m.type === 'image').length > 1 && (
+                                <div className="mt-4 flex gap-2 overflow-x-auto pb-2">
+                                    {(() => {
+                                        const images = product.media.filter(m => m.type === 'image');
+                                        // Filter images by selected color if color is selected
+                                        const filteredImages = selectedColor 
+                                            ? images.filter(img => !img.color || img.color.toLowerCase() === selectedColor.toLowerCase())
+                                            : images;
+                                        // If no color-specific images, show all images
+                                        const displayImages = filteredImages.length > 0 ? filteredImages : images;
+                                        
+                                        return displayImages.slice(0, 6).map((img, index) => (
+                                            <button
+                                                key={img.id || index}
+                                                type="button"
+                                                onClick={() => setCurrentImage(img.url)}
+                                                className={`flex-shrink-0 w-16 h-16 border-2 rounded-md overflow-hidden ${
+                                                    currentImage === img.url 
+                                                        ? 'border-indigo-600' 
+                                                        : 'border-gray-300 hover:border-indigo-400'
+                                                }`}
+                                            >
+                                                <img
+                                                    src={img.url}
+                                                    alt={`${product.name} - Image ${index + 1}`}
+                                                    className="w-full h-full object-cover"
+                                                    onError={(e) => {
+                                                        e.target.src = '/images/placeholder.svg';
+                                                    }}
+                                                />
+                                            </button>
+                                        ));
+                                    })()}
+                                </div>
+                            )}
                             {product.discount_info && (
                                 <div className="absolute top-4 right-4 bg-red-600 text-white px-3 py-2 rounded-lg text-sm sm:text-base font-bold shadow-lg">
                                     {product.discount_info.display_text}
@@ -281,6 +550,131 @@ export default function ProductDetail() {
                                 </p>
                             </div>
 
+                            {/* Size Selection */}
+                            {product.sizes && Array.isArray(product.sizes) && product.sizes.length > 0 && (
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Size {!selectedSize && <span className="text-red-500">*</span>}
+                                    </label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {product.sizes.map((sizeItem) => {
+                                            const isInStock = sizeItem.is_active && sizeItem.stock_quantity > 0;
+                                            const isSelected = selectedSize === sizeItem.size;
+                                            
+                                            return (
+                                                <button
+                                                    key={sizeItem.id || sizeItem.size}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        if (isInStock) {
+                                                            setSelectedSize(sizeItem.size);
+                                                            setCartMessage('');
+                                                        }
+                                                    }}
+                                                    disabled={!isInStock}
+                                                    className={`
+                                                        px-4 py-2 border-2 rounded-md text-sm font-medium transition-all
+                                                        ${isSelected 
+                                                            ? 'border-indigo-600 bg-indigo-600 text-white' 
+                                                            : isInStock
+                                                            ? 'border-gray-300 bg-white text-gray-700 hover:border-indigo-500 hover:bg-indigo-50'
+                                                            : 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed opacity-50'
+                                                        }
+                                                    `}
+                                                    title={!isInStock ? 'Out of stock' : `Stock: ${sizeItem.stock_quantity}`}
+                                                >
+                                                    {sizeItem.size}
+                                                    {!isInStock && <span className="ml-1 text-xs">(Out of Stock)</span>}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    {selectedSize && (
+                                        <p className="mt-2 text-sm text-gray-600">
+                                            Selected: <span className="font-semibold">{selectedSize}</span>
+                                        </p>
+                                    )}
+                                    {!selectedSize && product.sizes.every(size => !size.is_active || size.stock_quantity === 0) && (
+                                        <p className="mt-2 text-sm text-red-600">
+                                            All sizes are currently out of stock
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Color Selection */}
+                            {product.colors && Array.isArray(product.colors) && product.colors.length > 0 && (
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Color {!selectedColor && <span className="text-red-500">*</span>}
+                                    </label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {product.colors.map((colorItem) => {
+                                            const isInStock = colorItem.is_active && colorItem.stock_quantity > 0;
+                                            const isSelected = selectedColor === colorItem.color;
+                                            
+                                            return (
+                                                <button
+                                                    key={colorItem.id || colorItem.color}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        if (isInStock) {
+                                                            setSelectedColor(colorItem.color);
+                                                            setCartMessage('');
+                                                            
+                                                            // Update image when color is selected
+                                                            if (product && product.media) {
+                                                                const images = product.media.filter(m => m.type === 'image');
+                                                                const colorImage = images.find(img => 
+                                                                    img.color && img.color.toLowerCase() === colorItem.color.toLowerCase()
+                                                                );
+                                                                if (colorImage) {
+                                                                    setCurrentImage(colorImage.url);
+                                                                } else {
+                                                                    // Fallback to primary image or first image
+                                                                    const primaryImage = images.find(img => img.is_primary);
+                                                                    setCurrentImage(primaryImage ? primaryImage.url : (images[0]?.url || product.primary_image_url || product.image));
+                                                                }
+                                                            }
+                                                        }
+                                                    }}
+                                                    disabled={!isInStock}
+                                                    className={`
+                                                        px-4 py-2 border-2 rounded-md text-sm font-medium transition-all relative
+                                                        ${isSelected 
+                                                            ? 'border-indigo-600 bg-indigo-600 text-white' 
+                                                            : isInStock
+                                                            ? 'border-gray-300 bg-white text-gray-700 hover:border-indigo-500 hover:bg-indigo-50'
+                                                            : 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed opacity-50'
+                                                        }
+                                                    `}
+                                                    title={!isInStock ? 'Out of stock' : `Stock: ${colorItem.stock_quantity}`}
+                                                >
+                                                    {colorItem.color_code && (
+                                                        <span 
+                                                            className="inline-block w-4 h-4 rounded-full mr-2 border border-gray-300"
+                                                            style={{ backgroundColor: colorItem.color_code }}
+                                                        />
+                                                    )}
+                                                    {colorItem.color}
+                                                    {!isInStock && <span className="ml-1 text-xs">(Out of Stock)</span>}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    {selectedColor && (
+                                        <p className="mt-2 text-sm text-gray-600">
+                                            Selected: <span className="font-semibold">{selectedColor}</span>
+                                        </p>
+                                    )}
+                                    {!selectedColor && product.colors.every(color => !color.is_active || color.stock_quantity === 0) && (
+                                        <p className="mt-2 text-sm text-red-600">
+                                            All colors are currently out of stock
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+
                             <div className="mb-4">
                                 <label className="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
                                 <div className="flex items-center gap-2">
@@ -318,7 +712,12 @@ export default function ProductDetail() {
                                 <Button 
                                     className="flex-1 sm:flex-none"
                                     onClick={handleAddToCart}
-                                    disabled={addingToCart || !product.in_stock}
+                                    disabled={
+                                        addingToCart || 
+                                        !product.in_stock || 
+                                        (product.sizes && Array.isArray(product.sizes) && product.sizes.length > 0 && (!selectedSize || selectedSize === null || selectedSize === '')) ||
+                                        (product.colors && Array.isArray(product.colors) && product.colors.length > 0 && (!selectedColor || selectedColor === null || selectedColor === ''))
+                                    }
                                 >
                                     {addingToCart ? 'Adding...' : 'Add to Cart'}
                                 </Button>
@@ -326,7 +725,12 @@ export default function ProductDetail() {
                                     variant="outline"
                                     className="flex-1 sm:flex-none"
                                     onClick={handleBuyNow}
-                                    disabled={addingToCart || !product.in_stock}
+                                    disabled={
+                                        addingToCart || 
+                                        !product.in_stock || 
+                                        (product.sizes && Array.isArray(product.sizes) && product.sizes.length > 0 && (!selectedSize || selectedSize === null || selectedSize === '')) ||
+                                        (product.colors && Array.isArray(product.colors) && product.colors.length > 0 && (!selectedColor || selectedColor === null || selectedColor === ''))
+                                    }
                                 >
                                     {addingToCart ? 'Adding...' : 'Buy Now'}
                                 </Button>

@@ -17,13 +17,15 @@ class DatabaseSeeder extends Seeder
     {
         $this->command->info('Starting database seeding...');
         
-        // Seed in order: Users -> Categories -> Products -> Discounts -> Coupon Codes
+        // Seed in order: Users -> Categories -> Products -> Product Sizes -> Discounts -> Coupon Codes
         // Users can be seeded first as they don't depend on other tables
+        // Product Sizes depend on Products, so they must be seeded after Products
         // Discounts depend on Products, so they must be seeded after Products
         $this->call([
             DefaultUsersSeeder::class,
             DefaultCategoriesSeeder::class,
             DefaultProductsSeeder::class,
+            DefaultProductSizesSeeder::class,
             DefaultDiscountsSeeder::class,
             DefaultCouponCodesSeeder::class,
         ]);

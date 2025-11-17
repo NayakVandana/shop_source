@@ -5,15 +5,132 @@ namespace App\Http\Controllers\user;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\Category;
+use App\Models\Discount;
 use Illuminate\Http\Request;
 use Exception;
 
 class ProductController extends Controller
 {
+    /**
+     * Format product data with calculated fields
+     */
+    protected function formatProductData($product)
+    {
+        $productArray = $product->toArray();
+        
+        // Add image URLs
+        if ($product->relationLoaded('media')) {
+            $images = $product->media->where('type', 'image');
+            $productArray['image_urls'] = $images->pluck('url')->toArray();
+            $primaryImage = $images->where('is_primary', true)->first() ?? $images->first();
+            $productArray['primary_image_url'] = $primaryImage ? $primaryImage->url : asset('images/placeholder.svg');
+            
+            $videos = $product->media->where('type', 'video');
+            $productArray['video_urls'] = $videos->pluck('url')->toArray();
+            $primaryVideo = $videos->where('is_primary', true)->first() ?? $videos->first();
+            $productArray['primary_video_url'] = $primaryVideo ? $primaryVideo->url : null;
+        } else {
+            $productArray['image_urls'] = [];
+            $productArray['primary_image_url'] = asset('images/placeholder.svg');
+            $productArray['video_urls'] = [];
+            $productArray['primary_video_url'] = null;
+        }
+        
+        // Calculate discount info
+        $productArray['discount_info'] = $this->calculateProductDiscountInfo($product);
+        $productArray['final_price'] = $productArray['discount_info'] 
+            ? $productArray['discount_info']['final_price'] 
+            : ($product->sale_price ?? $product->price);
+        
+        return $productArray;
+    }
+
+    /**
+     * Calculate discount information for a product
+     */
+    protected function calculateProductDiscountInfo(Product $product)
+    {
+        if (!$product->relationLoaded('discounts')) {
+            $product->load('discounts');
+        }
+
+        $validDiscounts = $product->discounts->filter(function ($discount) {
+            if (!$discount->is_active) {
+                return false;
+            }
+
+            $now = now();
+            if ($discount->start_date && $now->lt($discount->start_date)) {
+                return false;
+            }
+
+            if ($discount->end_date && $now->gt($discount->end_date)) {
+                return false;
+            }
+
+            if ($discount->usage_limit && $discount->usage_count >= $discount->usage_limit) {
+                return false;
+            }
+
+            return true;
+        });
+
+        if ($validDiscounts->isEmpty()) {
+            return null;
+        }
+
+        $basePrice = $product->sale_price ?? $product->price;
+        $bestDiscount = $validDiscounts->sortByDesc(function ($discount) use ($basePrice) {
+            return $this->calculateDiscountAmount($discount, $basePrice);
+        })->first();
+
+        $discountAmount = $this->calculateDiscountAmount($bestDiscount, $basePrice);
+        $finalPrice = max(0, $basePrice - $discountAmount);
+
+        return [
+            'discount_id' => $bestDiscount->id,
+            'discount_uuid' => $bestDiscount->uuid,
+            'discount_name' => $bestDiscount->name,
+            'discount_type' => $bestDiscount->type,
+            'discount_value' => (float) $bestDiscount->value,
+            'discount_amount' => (float) $discountAmount,
+            'original_price' => (float) $basePrice,
+            'final_price' => (float) $finalPrice,
+            'discount_percentage' => $basePrice > 0 ? round(($discountAmount / $basePrice) * 100, 2) : 0,
+            'display_text' => $bestDiscount->type === 'percentage' 
+                ? number_format($bestDiscount->value, 2) . "% OFF" 
+                : "$" . number_format($bestDiscount->value, 2) . " OFF",
+        ];
+    }
+
+    /**
+     * Calculate discount amount for a discount and price
+     */
+    protected function calculateDiscountAmount(Discount $discount, $price): float
+    {
+        if ($discount->min_purchase_amount && $price < $discount->min_purchase_amount) {
+            return 0;
+        }
+
+        $discountAmount = 0;
+        
+        if ($discount->type === 'percentage') {
+            $discountAmount = ($price * $discount->value) / 100;
+        } else {
+            $discountAmount = $discount->value;
+        }
+
+        if ($discount->max_discount_amount && $discountAmount > $discount->max_discount_amount) {
+            $discountAmount = $discount->max_discount_amount;
+        }
+
+        return min($discountAmount, $price);
+    }
+
     public function index(Request $request)
     {
         try {
-            $query = Product::with(['category', 'media', 'discounts'])->where('is_active', true);
+            $query = Product::with(['category', 'media', 'discounts', 'sizes', 'colors'])->where('is_active', true);
 
             // Search
             if ($request->has('search')) {
@@ -64,8 +181,10 @@ class ProductController extends Controller
             $perPage = $request->get('per_page', 12);
             $products = $query->paginate($perPage);
 
-            // Media URLs are automatically available via model attributes
-            // No need to manually transform - they're accessed via accessors
+            // Format products with calculated fields
+            $products->getCollection()->transform(function ($product) {
+                return $this->formatProductData($product);
+            });
 
             return $this->sendJsonResponse(true, 'Products retrieved successfully', $products);
         } catch (Exception $e) {
@@ -80,15 +199,14 @@ class ProductController extends Controller
                 'id' => 'required|string'
             ]);
 
-            $product = Product::with(['category', 'media', 'discounts'])
+            $product = Product::with(['category', 'media', 'discounts', 'sizes', 'colors'])
                 ->where('is_active', true)
                 ->where('uuid', $data['id'])
                 ->firstOrFail();
             
-            // Media URLs are automatically available via model attributes
-            // image_urls, primary_image_url, video_urls, primary_video_url
+            $formattedProduct = $this->formatProductData($product);
             
-            return $this->sendJsonResponse(true, 'Product retrieved successfully', $product);
+            return $this->sendJsonResponse(true, 'Product retrieved successfully', $formattedProduct);
         } catch (Exception $e) {
             return $this->sendError($e);
         }
@@ -97,14 +215,18 @@ class ProductController extends Controller
     public function featured(Request $request)
     {
         try {
-            $products = Product::with(['category', 'media', 'discounts'])
+            $products = Product::with(['category', 'media', 'discounts', 'sizes', 'colors'])
                 ->where('is_active', true)
                 ->where('is_featured', true)
                 ->orderBy('created_at', 'desc')
                 ->limit(8)
                 ->get();
             
-            return $this->sendJsonResponse(true, 'Featured products retrieved successfully', $products);
+            $formattedProducts = $products->map(function ($product) {
+                return $this->formatProductData($product);
+            });
+            
+            return $this->sendJsonResponse(true, 'Featured products retrieved successfully', $formattedProducts);
         } catch (Exception $e) {
             return $this->sendError($e);
         }
@@ -119,14 +241,18 @@ class ProductController extends Controller
 
             $product = Product::where('uuid', $data['id'])->firstOrFail();
             
-            $relatedProducts = Product::with(['category', 'media', 'discounts'])
+            $relatedProducts = Product::with(['category', 'media', 'discounts', 'sizes', 'colors'])
                 ->where('is_active', true)
                 ->where('uuid', '!=', $data['id'])
                 ->where('category_id', $product->category_id)
                 ->limit(4)
                 ->get();
             
-            return $this->sendJsonResponse(true, 'Related products retrieved successfully', $relatedProducts);
+            $formattedProducts = $relatedProducts->map(function ($product) {
+                return $this->formatProductData($product);
+            });
+            
+            return $this->sendJsonResponse(true, 'Related products retrieved successfully', $formattedProducts);
         } catch (Exception $e) {
             return $this->sendError($e);
         }

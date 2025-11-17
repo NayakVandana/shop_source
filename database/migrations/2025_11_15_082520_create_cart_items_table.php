@@ -15,12 +15,15 @@ return new class extends Migration
             $table->id();
             $table->foreignId('cart_id')->constrained()->onDelete('cascade');
             $table->foreignId('product_id')->constrained()->onDelete('cascade');
+            $table->string('size', 50)->nullable(); // Product size (S, M, L, etc.)
+            $table->string('color', 100)->nullable(); // Product color (Red, Blue, etc.)
             $table->integer('quantity')->default(1);
             $table->decimal('price', 10, 2); // Price at time of adding to cart
             $table->decimal('discount_amount', 10, 2)->default(0); // Discount applied
             $table->timestamps();
             
-            $table->unique(['cart_id', 'product_id']);
+            // Unique constraint: same product with same size and color in same cart
+            $table->unique(['cart_id', 'product_id', 'size', 'color'], 'cart_items_cart_product_size_color_unique');
         });
     }
 
