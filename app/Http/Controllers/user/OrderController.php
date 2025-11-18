@@ -73,26 +73,14 @@ class OrderController extends Controller
             // Validate all cart items are still available
             foreach ($cart->items as $item) {
                 $product = $item->product;
-                $product->load('sizes');
                 
                 if (!$product->is_active) {
                     return $this->sendJsonResponse(false, "Product '{$product->name}' is no longer available", null, 400);
                 }
                 
-                // Check size-specific stock if size is set
-                if ($item->size) {
-                    $productSize = $product->sizes()->where('size', $item->size)->first();
-                    if (!$productSize || !$productSize->is_active) {
-                        return $this->sendJsonResponse(false, "Size '{$item->size}' for '{$product->name}' is no longer available", null, 400);
-                    }
-                    if ($productSize->stock_quantity < $item->quantity) {
-                        return $this->sendJsonResponse(false, "Insufficient stock for size '{$item->size}' of '{$product->name}'", null, 400);
-                    }
-                } else {
-                    // Check general product stock
-                    if ($product->manage_stock && $product->stock_quantity < $item->quantity) {
-                        return $this->sendJsonResponse(false, "Insufficient stock for '{$product->name}'", null, 400);
-                    }
+                // Check general product stock
+                if ($product->manage_stock && $product->stock_quantity < $item->quantity) {
+                    return $this->sendJsonResponse(false, "Insufficient stock for '{$product->name}'", null, 400);
                 }
             }
 
@@ -170,7 +158,6 @@ class OrderController extends Controller
                 // Create order items and update stock
                 foreach ($cart->items as $cartItem) {
                     $product = $cartItem->product;
-                    $product->load(['sizes', 'colors']);
                     
                     // Calculate item subtotal in controller (business logic)
                     $itemSubtotal = (($cartItem->price ?? 0) - ($cartItem->discount_amount ?? 0)) * ($cartItem->quantity ?? 0);
@@ -180,35 +167,13 @@ class OrderController extends Controller
                         'product_id' => $product->id,
                         'product_name' => $product->name,
                         'product_sku' => $product->sku,
-                        'size' => $cartItem->size,
-                        'color' => $cartItem->color,
+                        'size' => null,
+                        'color' => null,
                         'quantity' => $cartItem->quantity,
                         'price' => $cartItem->price,
                         'discount_amount' => $cartItem->discount_amount,
                         'subtotal' => $itemSubtotal,
                     ]);
-
-                    // Update size-specific stock if size is set
-                    if ($cartItem->size) {
-                        $productSize = $product->sizes()->where('size', $cartItem->size)->first();
-                        if ($productSize) {
-                            $productSize->decrement('stock_quantity', $cartItem->quantity);
-                            if ($productSize->stock_quantity <= 0) {
-                                $productSize->update(['is_active' => false]);
-                            }
-                        }
-                    }
-
-                    // Update color-specific stock if color is set
-                    if ($cartItem->color) {
-                        $productColor = $product->colors()->where('color', $cartItem->color)->first();
-                        if ($productColor) {
-                            $productColor->decrement('stock_quantity', $cartItem->quantity);
-                            if ($productColor->stock_quantity <= 0) {
-                                $productColor->update(['is_active' => false]);
-                            }
-                        }
-                    }
                     
                     // Update general product stock
                     if ($product->manage_stock) {

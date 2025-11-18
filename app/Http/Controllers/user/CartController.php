@@ -177,7 +177,6 @@ class CartController extends Controller
                     foreach ($guestCart->items as $guestItem) {
                         $existingItem = CartItem::where('cart_id', $userCart->id)
                             ->where('product_id', $guestItem->product_id)
-                            ->where('size', $guestItem->size)
                             ->first();
 
                         if ($existingItem) {
@@ -247,8 +246,6 @@ class CartController extends Controller
             $validator = Validator::make($request->all(), [
                 'product_id' => 'required',
                 'quantity' => 'required|integer|min:1',
-                'size' => 'nullable|string|max:50',
-                'color' => 'nullable|string|max:100',
             ]);
 
             if ($validator->fails()) {
@@ -257,7 +254,7 @@ class CartController extends Controller
 
             // Find product by UUID (product_id can be UUID string or numeric ID)
             // Try UUID first, then fall back to numeric ID
-            $product = Product::with(['discounts', 'sizes', 'colors'])
+            $product = Product::with(['discounts'])
                 ->where(function($query) use ($request) {
                     $query->where('uuid', $request->product_id)
                           ->orWhere('id', $request->product_id);
@@ -269,69 +266,9 @@ class CartController extends Controller
                 return $this->sendJsonResponse(false, 'Product is not available', null, 400);
             }
 
-            // Check if product has sizes - if so, size is required
-            $hasSizes = $product->sizes && $product->sizes->count() > 0;
-            $size = $request->size;
-            $productSize = null;
-            
-            if ($hasSizes) {
-                // Product has sizes, so size is required
-                if (!$size || trim($size) === '') {
-                    return $this->sendJsonResponse(false, 'Please select a size for this product', null, 400);
-                }
-                
-                // Validate the selected size exists and is available
-                $productSize = $product->sizes()->where('size', $size)->first();
-                if (!$productSize) {
-                    return $this->sendJsonResponse(false, 'Selected size is not available for this product', null, 400);
-                }
-                
-                if (!$productSize->is_active) {
-                    return $this->sendJsonResponse(false, 'Selected size is not available', null, 400);
-                }
-                
-                if ($productSize->stock_quantity < $request->quantity) {
-                    return $this->sendJsonResponse(false, 'Insufficient stock available for selected size', null, 400);
-                }
-            } else {
-                // Product doesn't have sizes, size should be null
-                $size = null;
-            }
-
-            // Check if product has colors - if so, color is required
-            $hasColors = $product->colors && $product->colors->count() > 0;
-            $color = $request->color;
-            $productColor = null;
-            
-            if ($hasColors) {
-                // Product has colors, so color is required
-                if (!$color || trim($color) === '') {
-                    return $this->sendJsonResponse(false, 'Please select a color for this product', null, 400);
-                }
-                
-                // Validate the selected color exists and is available
-                $productColor = $product->colors()->where('color', $color)->first();
-                if (!$productColor) {
-                    return $this->sendJsonResponse(false, 'Selected color is not available for this product', null, 400);
-                }
-                
-                if (!$productColor->is_active) {
-                    return $this->sendJsonResponse(false, 'Selected color is not available', null, 400);
-                }
-                
-                if ($productColor->stock_quantity < $request->quantity) {
-                    return $this->sendJsonResponse(false, 'Insufficient stock available for selected color', null, 400);
-                }
-            } else {
-                // Product doesn't have colors, color should be null
-                $color = null;
-            }
-
-            // Check general product stock if no size/color specific stock
-            if (!$productSize && !$productColor) {
-                if ($product->manage_stock && $product->stock_quantity < $request->quantity) {
-                    return $this->sendJsonResponse(false, 'Insufficient stock available', null, 400);
-                }
+            // Check general product stock
+            if ($product->manage_stock && $product->stock_quantity < $request->quantity) {
+                return $this->sendJsonResponse(false, 'Insufficient stock available', null, 400);
             }
 
             $cart = $this->getOrCreateCart($request);
@@ -342,11 +279,9 @@ class CartController extends Controller
             $discountAmount = $discountInfo ? $discountInfo['discount_amount'] : 0;
             $finalPrice = $discountInfo ? $discountInfo['final_price'] : $basePrice;
 
-            // Check if item already exists in cart (same product, size, and color)
+            // Check if item already exists in cart (same product)
             $cartItem = CartItem::where('cart_id', $cart->id)
                 ->where('product_id', $product->id)
-                ->where('size', $size)
-                ->where('color', $color)
                 ->first();
 
             if ($cartItem) {
@@ -354,18 +289,8 @@ class CartController extends Controller
                 $newQuantity = $cartItem->quantity + $request->quantity;
                 
                 // Check stock again
-                if ($productSize) {
-                    if ($productSize->stock_quantity < $newQuantity) {
-                        return $this->sendJsonResponse(false, 'Insufficient stock available for selected size', null, 400);
-                    }
-                } elseif ($productColor) {
-                    if ($productColor->stock_quantity < $newQuantity) {
-                        return $this->sendJsonResponse(false, 'Insufficient stock available for selected color', null, 400);
-                    }
-                } else {
-                    if ($product->manage_stock && $product->stock_quantity < $newQuantity) {
-                        return $this->sendJsonResponse(false, 'Insufficient stock available', null, 400);
-                    }
+                if ($product->manage_stock && $product->stock_quantity < $newQuantity) {
+                    return $this->sendJsonResponse(false, 'Insufficient stock available', null, 400);
                 }
 
                 $cartItem->update([
@@ -378,8 +303,8 @@ class CartController extends Controller
                 $cartItem = CartItem::create([
                     'cart_id' => $cart->id,
                     'product_id' => $product->id,
-                    'size' => $size,
-                    'color' => $color,
+                    'size' => null,
+                    'color' => null,
                     'quantity' => $request->quantity,
                     'price' => $finalPrice,
                     'discount_amount' => $discountAmount,
@@ -459,19 +384,10 @@ class CartController extends Controller
 
             // Check stock
             $product = $cartItem->product;
-            $product->load('sizes');
             
-            // Check size-specific stock if size is set
-            if ($cartItem->size) {
-                $productSize = $product->sizes()->where('size', $cartItem->size)->first();
-                if ($productSize && $productSize->stock_quantity < $request->quantity) {
-                    return $this->sendJsonResponse(false, 'Insufficient stock available for selected size', null, 400);
-                }
-            } else {
-                // Check general product stock
-                if ($product->manage_stock && $product->stock_quantity < $request->quantity) {
-                    return $this->sendJsonResponse(false, 'Insufficient stock available', null, 400);
-                }
+            // Check general product stock
+            if ($product->manage_stock && $product->stock_quantity < $request->quantity) {
+                return $this->sendJsonResponse(false, 'Insufficient stock available', null, 400);
             }
 
             // Update quantity and recalculate price/discount

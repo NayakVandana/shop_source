@@ -5,11 +5,8 @@ namespace App\Http\Controllers\admin;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\Category;
-use App\Models\ProductSize;
-use App\Models\ProductColor;
 use App\Models\ProductMedia;
 use App\Helpers\MediaStorageService;
-use App\Helpers\ProductSizeHelper;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Validator;
@@ -145,7 +142,7 @@ class ProductController extends Controller
     public function index(Request $request): Response
     {
         try {
-            $query = Product::with(['category', 'media', 'discounts', 'sizes', 'colors']);
+            $query = Product::with(['category', 'media', 'discounts']);
             
             // Search functionality
             if ($request->has('search')) {
@@ -282,53 +279,17 @@ class ProductController extends Controller
                 'video' => 'nullable|mimes:mp4,avi,mov,wmv,flv,webm|max:10240',
                 'videos' => 'nullable|array',
                 'videos.*' => 'mimes:mp4,avi,mov,wmv,flv,webm|max:10240',
-                'sizes' => 'nullable|array',
-                'sizes.*.size' => 'required|string|max:50',
-                'sizes.*.stock_quantity' => 'required|integer|min:0',
-                'sizes.*.is_active' => 'boolean',
-                'sizes.*.sort_order' => 'nullable|integer|min:0',
-                'colors' => 'nullable|array',
-                'colors.*.color' => 'required|string|max:100',
-                'colors.*.color_code' => 'nullable|string|max:50',
-                'colors.*.stock_quantity' => 'required|integer|min:0',
-                'colors.*.is_active' => 'boolean',
-                'colors.*.sort_order' => 'nullable|integer|min:0',
             ]);
 
             if ($validator->fails()) {
                 return $this->sendJsonResponse(false, 'Validation failed', ['errors' => $validator->errors()], 422);
             }
 
-            $data = $request->except(['images', 'image', 'videos', 'video', 'sizes', 'colors']);
+            $data = $request->except(['images', 'image', 'videos', 'video']);
             
             DB::beginTransaction();
             try {
                 $product = Product::create($data);
-                
-                // Handle sizes
-                if ($request->has('sizes') && is_array($request->sizes)) {
-                    foreach ($request->sizes as $index => $sizeData) {
-                        $product->sizes()->create([
-                            'size' => $sizeData['size'],
-                            'stock_quantity' => $sizeData['stock_quantity'] ?? 0,
-                            'is_active' => $sizeData['is_active'] ?? true,
-                            'sort_order' => $sizeData['sort_order'] ?? $index,
-                        ]);
-                    }
-                }
-
-                // Handle colors
-                if ($request->has('colors') && is_array($request->colors)) {
-                    foreach ($request->colors as $index => $colorData) {
-                        $product->colors()->create([
-                            'color' => $colorData['color'],
-                            'color_code' => $colorData['color_code'] ?? null,
-                            'stock_quantity' => $colorData['stock_quantity'] ?? 0,
-                            'is_active' => $colorData['is_active'] ?? true,
-                            'sort_order' => $colorData['sort_order'] ?? $index,
-                        ]);
-                    }
-                }
                 
                 // Handle single image upload
                 if ($request->hasFile('image')) {
@@ -351,7 +312,7 @@ class ProductController extends Controller
                 }
 
                 DB::commit();
-                $product->load(['category', 'media', 'discounts', 'sizes', 'colors']);
+                $product->load(['category', 'media', 'discounts']);
 
                 return $this->sendJsonResponse(true, 'Product created successfully', $product, 201);
             } catch (Exception $e) {
@@ -374,7 +335,7 @@ class ProductController extends Controller
                 'id' => 'required|string'
             ]);
 
-            $product = Product::with(['category', 'media', 'discounts', 'sizes', 'colors'])->where('uuid', $data['id'])->firstOrFail();
+            $product = Product::with(['category', 'media', 'discounts'])->where('uuid', $data['id'])->firstOrFail();
             
             return $this->sendJsonResponse(true, 'Product retrieved successfully', $product);
             
@@ -415,97 +376,16 @@ class ProductController extends Controller
                 'video' => 'nullable|mimes:mp4,avi,mov,wmv,flv,webm|max:10240',
                 'videos' => 'nullable|array',
                 'videos.*' => 'mimes:mp4,avi,mov,wmv,flv,webm|max:10240',
-                'sizes' => 'nullable|array',
-                'sizes.*.id' => 'nullable|exists:product_sizes,id',
-                'sizes.*.size' => 'required|string|max:50',
-                'sizes.*.stock_quantity' => 'required|integer|min:0',
-                'sizes.*.is_active' => 'boolean',
-                'sizes.*.sort_order' => 'nullable|integer|min:0',
-                'colors' => 'nullable|array',
-                'colors.*.id' => 'nullable|exists:product_colors,id',
-                'colors.*.color' => 'required|string|max:100',
-                'colors.*.color_code' => 'nullable|string|max:50',
-                'colors.*.stock_quantity' => 'required|integer|min:0',
-                'colors.*.is_active' => 'boolean',
-                'colors.*.sort_order' => 'nullable|integer|min:0',
             ]);
 
             if ($validator->fails()) {
                 return $this->sendJsonResponse(false, 'Validation failed', ['errors' => $validator->errors()], 422);
             }
 
-            $updateData = $request->except(['id', 'images', 'image', 'videos', 'video', 'sizes', 'colors']);
+            $updateData = $request->except(['id', 'images', 'image', 'videos', 'video']);
             
             DB::beginTransaction();
             try {
-                // Handle sizes
-                if ($request->has('sizes')) {
-                    $existingSizeIds = [];
-                    
-                    foreach ($request->sizes as $index => $sizeData) {
-                        if (isset($sizeData['id'])) {
-                            // Update existing size
-                            $size = $product->sizes()->find($sizeData['id']);
-                            if ($size) {
-                                $size->update([
-                                    'size' => $sizeData['size'],
-                                    'stock_quantity' => $sizeData['stock_quantity'] ?? 0,
-                                    'is_active' => $sizeData['is_active'] ?? true,
-                                    'sort_order' => $sizeData['sort_order'] ?? $index,
-                                ]);
-                                $existingSizeIds[] = $size->id;
-                            }
-                        } else {
-                            // Create new size
-                            $newSize = $product->sizes()->create([
-                                'size' => $sizeData['size'],
-                                'stock_quantity' => $sizeData['stock_quantity'] ?? 0,
-                                'is_active' => $sizeData['is_active'] ?? true,
-                                'sort_order' => $sizeData['sort_order'] ?? $index,
-                            ]);
-                            $existingSizeIds[] = $newSize->id;
-                        }
-                    }
-                    
-                    // Delete sizes that are not in the request
-                    $product->sizes()->whereNotIn('id', $existingSizeIds)->delete();
-                }
-
-                // Handle colors
-                if ($request->has('colors')) {
-                    $existingColorIds = [];
-                    
-                    foreach ($request->colors as $index => $colorData) {
-                        if (isset($colorData['id'])) {
-                            // Update existing color
-                            $color = $product->colors()->find($colorData['id']);
-                            if ($color) {
-                                $color->update([
-                                    'color' => $colorData['color'],
-                                    'color_code' => $colorData['color_code'] ?? null,
-                                    'stock_quantity' => $colorData['stock_quantity'] ?? 0,
-                                    'is_active' => $colorData['is_active'] ?? true,
-                                    'sort_order' => $colorData['sort_order'] ?? $index,
-                                ]);
-                                $existingColorIds[] = $color->id;
-                            }
-                        } else {
-                            // Create new color
-                            $newColor = $product->colors()->create([
-                                'color' => $colorData['color'],
-                                'color_code' => $colorData['color_code'] ?? null,
-                                'stock_quantity' => $colorData['stock_quantity'] ?? 0,
-                                'is_active' => $colorData['is_active'] ?? true,
-                                'sort_order' => $colorData['sort_order'] ?? $index,
-                            ]);
-                            $existingColorIds[] = $newColor->id;
-                        }
-                    }
-                    
-                    // Delete colors that are not in the request
-                    $product->colors()->whereNotIn('id', $existingColorIds)->delete();
-                }
-                
                 // Handle single image upload
                 if ($request->hasFile('image')) {
                     // Delete existing images
@@ -536,7 +416,7 @@ class ProductController extends Controller
 
                 $product->update($updateData);
                 DB::commit();
-                $product->load(['category', 'media', 'discounts', 'sizes', 'colors']);
+                $product->load(['category', 'media', 'discounts']);
 
                 return $this->sendJsonResponse(true, 'Product updated successfully', $product);
             } catch (Exception $e) {

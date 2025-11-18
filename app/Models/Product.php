@@ -54,15 +54,6 @@ class Product extends Model
         return $this->belongsTo(Category::class);
     }
 
-    public function sizes(): HasMany
-    {
-        return $this->hasMany(ProductSize::class)->orderBy('sort_order')->orderBy('size');
-    }
-
-    public function colors(): HasMany
-    {
-        return $this->hasMany(ProductColor::class)->orderBy('sort_order')->orderBy('color');
-    }
 
     public function discounts(): BelongsToMany
     {
