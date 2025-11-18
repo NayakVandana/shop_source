@@ -15,6 +15,8 @@ export default function ProductDetail() {
     const [currentImage, setCurrentImage] = useState(null);
     const [addingToCart, setAddingToCart] = useState(false);
     const [cartMessage, setCartMessage] = useState('');
+    const [selectedSize, setSelectedSize] = useState(null);
+    const [selectedColor, setSelectedColor] = useState(null);
 
     // Remove token from URL immediately - use localStorage/cookies only
     useEffect(() => {
@@ -58,17 +60,35 @@ export default function ProductDetail() {
         }
     }, []);
 
-    // Update image when product loads
+    // Update image when product loads or color changes
     useEffect(() => {
         if (product && product.media) {
-            const images = product.media.filter(m => m.type === 'image');
+            let images = product.media.filter(m => m.type === 'image');
+            
+            // Filter images by selected color if color is selected
+            if (selectedColor) {
+                const colorImages = images.filter(img => img.color === selectedColor);
+                if (colorImages.length > 0) {
+                    images = colorImages;
+                } else {
+                    // If no color-specific images, show general images (without color)
+                    images = images.filter(img => !img.color || img.color === null);
+                }
+            } else {
+                // If no color selected, show general images (without color) or all images
+                const generalImages = images.filter(img => !img.color || img.color === null);
+                if (generalImages.length > 0) {
+                    images = generalImages;
+                }
+            }
+            
             const primaryImage = images.find(img => img.is_primary);
             setCurrentImage(primaryImage ? primaryImage.url : (images[0]?.url || product.primary_image_url || product.image));
         } else if (product) {
             setCurrentImage(product.primary_image_url || product.image);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [product]);
+    }, [product, selectedColor]);
 
     const handleAddToCart = () => {
         if (!product) return;
@@ -82,10 +102,20 @@ export default function ProductDetail() {
         // Use UUID if available, otherwise use numeric ID
         const productId = product.uuid || product.id;
 
-        axios.post('/api/user/cart/add', {
+        const cartData = {
             product_id: productId,
             quantity: quantity
-        }, {
+        };
+
+        // Add size and color if selected
+        if (selectedSize) {
+            cartData.size = selectedSize;
+        }
+        if (selectedColor) {
+            cartData.color = selectedColor;
+        }
+
+        axios.post('/api/user/cart/add', cartData, {
             headers: token ? {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
@@ -133,10 +163,20 @@ export default function ProductDetail() {
         // Use UUID if available, otherwise use numeric ID
         const productId = product.uuid || product.id;
 
-        axios.post('/api/user/cart/add', {
+        const cartData = {
             product_id: productId,
             quantity: quantity
-        }, {
+        };
+
+        // Add size and color if selected
+        if (selectedSize) {
+            cartData.size = selectedSize;
+        }
+        if (selectedColor) {
+            cartData.color = selectedColor;
+        }
+
+        axios.post('/api/user/cart/add', cartData, {
             headers: token ? {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
@@ -254,7 +294,24 @@ export default function ProductDetail() {
                             {product.media && product.media.filter(m => m.type === 'image').length > 1 && (
                                 <div className="mt-4 flex gap-2 overflow-x-auto pb-2">
                                     {(() => {
-                                        const images = product.media.filter(m => m.type === 'image');
+                                        let images = product.media.filter(m => m.type === 'image');
+                                        
+                                        // Filter images by selected color if color is selected
+                                        if (selectedColor) {
+                                            const colorImages = images.filter(img => img.color === selectedColor);
+                                            if (colorImages.length > 0) {
+                                                images = colorImages;
+                                            } else {
+                                                // If no color-specific images, show general images (without color)
+                                                images = images.filter(img => !img.color || img.color === null);
+                                            }
+                                        } else {
+                                            // If no color selected, show general images (without color) or all images
+                                            const generalImages = images.filter(img => !img.color || img.color === null);
+                                            if (generalImages.length > 0) {
+                                                images = generalImages;
+                                            }
+                                        }
                                         
                                         return images.slice(0, 6).map((img, index) => (
                                             <button
@@ -278,6 +335,46 @@ export default function ProductDetail() {
                                             </button>
                                         ));
                                     })()}
+                                </div>
+                            )}
+                            
+                            {/* Video Gallery - Color-specific videos */}
+                            {product.media && product.media.filter(m => m.type === 'video').length > 0 && (
+                                <div className="mt-4">
+                                    <h3 className="text-sm font-medium text-gray-700 mb-2">Videos</h3>
+                                    <div className="grid grid-cols-1 gap-2">
+                                        {(() => {
+                                            let videos = product.media.filter(m => m.type === 'video');
+                                            
+                                            // Filter videos by selected color if color is selected
+                                            if (selectedColor) {
+                                                const colorVideos = videos.filter(vid => vid.color === selectedColor);
+                                                if (colorVideos.length > 0) {
+                                                    videos = colorVideos;
+                                                } else {
+                                                    // If no color-specific videos, show general videos (without color)
+                                                    videos = videos.filter(vid => !vid.color || vid.color === null);
+                                                }
+                                            } else {
+                                                // If no color selected, show general videos (without color) or all videos
+                                                const generalVideos = videos.filter(vid => !vid.color || vid.color === null);
+                                                if (generalVideos.length > 0) {
+                                                    videos = generalVideos;
+                                                }
+                                            }
+                                            
+                                            return videos.map((vid, index) => (
+                                                <video
+                                                    key={vid.id || index}
+                                                    src={vid.url}
+                                                    controls
+                                                    className="w-full h-48 sm:h-64 object-cover rounded-md"
+                                                >
+                                                    Your browser does not support the video tag.
+                                                </video>
+                                            ));
+                                        })()}
+                                    </div>
                                 </div>
                             )}
                             {product.discount_info && (
@@ -332,6 +429,56 @@ export default function ProductDetail() {
                             </div>
 
 
+                            {/* Size Selection */}
+                            {product.sizes && Array.isArray(product.sizes) && product.sizes.length > 0 && (
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Size {selectedSize ? `: ${selectedSize}` : ''}
+                                    </label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {product.sizes.map((size) => (
+                                            <button
+                                                key={size}
+                                                type="button"
+                                                onClick={() => setSelectedSize(size)}
+                                                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                                                    selectedSize === size
+                                                        ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+                                                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                                }`}
+                                            >
+                                                {size}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Color Selection */}
+                            {product.colors && Array.isArray(product.colors) && product.colors.length > 0 && (
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Color {selectedColor ? `: ${selectedColor}` : ''}
+                                    </label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {product.colors.map((color) => (
+                                            <button
+                                                key={color}
+                                                type="button"
+                                                onClick={() => setSelectedColor(color)}
+                                                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                                                    selectedColor === color
+                                                        ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+                                                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                                }`}
+                                            >
+                                                {color}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="mb-4">
                                 <label className="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
                                 <div className="flex items-center gap-2">
@@ -369,7 +516,7 @@ export default function ProductDetail() {
                                 <Button 
                                     className="flex-1 sm:flex-none"
                                     onClick={handleAddToCart}
-                                    disabled={addingToCart || !product.in_stock}
+                                    disabled={addingToCart || !product.in_stock || (product.sizes && product.sizes.length > 0 && !selectedSize)}
                                 >
                                     {addingToCart ? 'Adding...' : 'Add to Cart'}
                                 </Button>
@@ -377,11 +524,14 @@ export default function ProductDetail() {
                                     variant="outline"
                                     className="flex-1 sm:flex-none"
                                     onClick={handleBuyNow}
-                                    disabled={addingToCart || !product.in_stock}
+                                    disabled={addingToCart || !product.in_stock || (product.sizes && product.sizes.length > 0 && !selectedSize)}
                                 >
                                     {addingToCart ? 'Adding...' : 'Buy Now'}
                                 </Button>
                             </div>
+                            {(product.sizes && product.sizes.length > 0 && !selectedSize) && (
+                                <p className="text-sm text-red-600 mt-2">Please select a size</p>
+                            )}
                         </div>
                     </div>
                 </div>

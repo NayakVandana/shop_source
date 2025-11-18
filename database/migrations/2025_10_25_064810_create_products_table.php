@@ -26,6 +26,8 @@ return new class extends Migration
             $table->boolean('in_stock')->default(true);
             $table->decimal('weight', 8, 2)->nullable();
             $table->string('dimensions')->nullable();
+            $table->json('sizes')->nullable(); // Available sizes for clothing products
+            $table->json('colors')->nullable(); // Available colors for clothing products
             $table->boolean('is_featured')->default(false);
             $table->boolean('is_active')->default(true);
             $table->foreignId('category_id')->nullable()->constrained()->onDelete('set null');

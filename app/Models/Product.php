@@ -13,7 +13,7 @@ class Product extends Model
     protected $fillable = [
         'name', 'slug', 'description', 'short_description', 'price', 'sale_price',
         'sku', 'stock_quantity', 'manage_stock', 'in_stock', 'weight', 'dimensions',
-        'is_featured', 'is_active', 'category_id', 'uuid'
+        'is_featured', 'is_active', 'category_id', 'uuid', 'sizes', 'colors'
     ];
 
     protected $casts = [
@@ -24,6 +24,8 @@ class Product extends Model
         'in_stock' => 'boolean',
         'is_featured' => 'boolean',
         'is_active' => 'boolean',
+        'sizes' => 'array',
+        'colors' => 'array',
     ];
 
     protected static function boot()
@@ -74,5 +76,10 @@ class Product extends Model
     public function videosMedia(): HasMany
     {
         return $this->hasMany(ProductMedia::class)->where('type', 'video')->orderBy('sort_order');
+    }
+
+    public function variations(): HasMany
+    {
+        return $this->hasMany(ProductVariation::class);
     }
 }

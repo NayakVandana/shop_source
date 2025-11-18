@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Product;
+use App\Models\ProductVariation;
 use App\Models\Discount;
 use Illuminate\Http\Request;
 use Exception;
@@ -246,6 +247,8 @@ class CartController extends Controller
             $validator = Validator::make($request->all(), [
                 'product_id' => 'required',
                 'quantity' => 'required|integer|min:1',
+                'size' => 'nullable|string|max:50',
+                'color' => 'nullable|string|max:50',
             ]);
 
             if ($validator->fails()) {
@@ -266,9 +269,35 @@ class CartController extends Controller
                 return $this->sendJsonResponse(false, 'Product is not available', null, 400);
             }
 
-            // Check general product stock
-            if ($product->manage_stock && $product->stock_quantity < $request->quantity) {
-                return $this->sendJsonResponse(false, 'Insufficient stock available', null, 400);
+            // Check stock - prioritize variation stock if size/color provided
+            if ($product->manage_stock) {
+                if ($request->size || $request->color) {
+                    // Check variation stock
+                    $variation = ProductVariation::where('product_id', $product->id)
+                        ->where('size', $request->size ?? null)
+                        ->where('color', $request->color ?? null)
+                        ->first();
+                    
+                    if ($variation) {
+                        // Check variation stock
+                        if ($variation->stock_quantity < $request->quantity) {
+                            return $this->sendJsonResponse(false, 'Insufficient stock available for selected size/color', null, 400);
+                        }
+                        if (!$variation->in_stock) {
+                            return $this->sendJsonResponse(false, 'Selected size/color combination is out of stock', null, 400);
+                        }
+                    } else {
+                        // Variation doesn't exist, check general product stock
+                        if ($product->stock_quantity < $request->quantity) {
+                            return $this->sendJsonResponse(false, 'Insufficient stock available', null, 400);
+                        }
+                    }
+                } else {
+                    // No size/color specified, check general product stock
+                    if ($product->stock_quantity < $request->quantity) {
+                        return $this->sendJsonResponse(false, 'Insufficient stock available', null, 400);
+                    }
+                }
             }
 
             $cart = $this->getOrCreateCart($request);
@@ -279,18 +308,39 @@ class CartController extends Controller
             $discountAmount = $discountInfo ? $discountInfo['discount_amount'] : 0;
             $finalPrice = $discountInfo ? $discountInfo['final_price'] : $basePrice;
 
-            // Check if item already exists in cart (same product)
+            // Check if item already exists in cart (same product, size, and color)
             $cartItem = CartItem::where('cart_id', $cart->id)
                 ->where('product_id', $product->id)
+                ->where('size', $request->size ?? null)
+                ->where('color', $request->color ?? null)
                 ->first();
 
             if ($cartItem) {
                 // Update quantity
                 $newQuantity = $cartItem->quantity + $request->quantity;
                 
-                // Check stock again
-                if ($product->manage_stock && $product->stock_quantity < $newQuantity) {
-                    return $this->sendJsonResponse(false, 'Insufficient stock available', null, 400);
+                // Check stock again - prioritize variation stock if size/color provided
+                if ($product->manage_stock) {
+                    if ($request->size || $request->color) {
+                        $variation = ProductVariation::where('product_id', $product->id)
+                            ->where('size', $request->size ?? null)
+                            ->where('color', $request->color ?? null)
+                            ->first();
+                        
+                        if ($variation) {
+                            if ($variation->stock_quantity < $newQuantity) {
+                                return $this->sendJsonResponse(false, 'Insufficient stock available for selected size/color', null, 400);
+                            }
+                        } else {
+                            if ($product->stock_quantity < $newQuantity) {
+                                return $this->sendJsonResponse(false, 'Insufficient stock available', null, 400);
+                            }
+                        }
+                    } else {
+                        if ($product->stock_quantity < $newQuantity) {
+                            return $this->sendJsonResponse(false, 'Insufficient stock available', null, 400);
+                        }
+                    }
                 }
 
                 $cartItem->update([
@@ -306,6 +356,8 @@ class CartController extends Controller
                     'quantity' => $request->quantity,
                     'price' => $finalPrice,
                     'discount_amount' => $discountAmount,
+                    'size' => $request->size ?? null,
+                    'color' => $request->color ?? null,
                 ]);
             }
 
@@ -383,9 +435,32 @@ class CartController extends Controller
             // Check stock
             $product = $cartItem->product;
             
-            // Check general product stock
-            if ($product->manage_stock && $product->stock_quantity < $request->quantity) {
-                return $this->sendJsonResponse(false, 'Insufficient stock available', null, 400);
+            // Check stock - prioritize variation stock if size/color provided
+            if ($product->manage_stock) {
+                if ($cartItem->size || $cartItem->color) {
+                    // Check variation stock
+                    $variation = ProductVariation::where('product_id', $product->id)
+                        ->where('size', $cartItem->size ?? null)
+                        ->where('color', $cartItem->color ?? null)
+                        ->first();
+                    
+                    if ($variation) {
+                        if ($variation->stock_quantity < $request->quantity) {
+                            return $this->sendJsonResponse(false, 'Insufficient stock available for selected size/color', null, 400);
+                        }
+                        if (!$variation->in_stock) {
+                            return $this->sendJsonResponse(false, 'Selected size/color combination is out of stock', null, 400);
+                        }
+                    } else {
+                        if ($product->stock_quantity < $request->quantity) {
+                            return $this->sendJsonResponse(false, 'Insufficient stock available', null, 400);
+                        }
+                    }
+                } else {
+                    if ($product->stock_quantity < $request->quantity) {
+                        return $this->sendJsonResponse(false, 'Insufficient stock available', null, 400);
+                    }
+                }
             }
 
             // Update quantity and recalculate price/discount

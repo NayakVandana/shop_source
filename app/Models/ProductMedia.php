@@ -21,6 +21,7 @@ class ProductMedia extends Model
         'url',
         'sort_order',
         'is_primary',
+        'color',
     ];
 
     protected $casts = [
@@ -98,5 +99,13 @@ class ProductMedia extends Model
     public function scopePrimary($query)
     {
         return $query->where('is_primary', true);
+    }
+
+    /**
+     * Scope to get images for a specific color
+     */
+    public function scopeForColor($query, $color)
+    {
+        return $query->where('color', $color);
     }
 }

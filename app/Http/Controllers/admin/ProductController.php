@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\Category;
 use App\Models\ProductMedia;
+use App\Models\ProductVariation;
 use App\Helpers\MediaStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
@@ -21,7 +23,7 @@ class ProductController extends Controller
     /**
      * Store product images
      */
-    protected function storeProductImages(Product $product, $uploadedImages, $setFirstAsPrimary = true)
+    protected function storeProductImages(Product $product, $uploadedImages, $setFirstAsPrimary = true, $color = null)
     {
         if (!$uploadedImages) {
             return [];
@@ -56,6 +58,7 @@ class ProductController extends Controller
                     'url' => $mediaData['url'],
                     'sort_order' => $index,
                     'is_primary' => $setFirstAsPrimary && $index === 0,
+                    'color' => $color,
                 ]);
 
                 $mediaRecords[] = $mediaRecord;
@@ -68,7 +71,7 @@ class ProductController extends Controller
     /**
      * Store product videos
      */
-    protected function storeProductVideos(Product $product, $uploadedVideos, $setFirstAsPrimary = true)
+    protected function storeProductVideos(Product $product, $uploadedVideos, $setFirstAsPrimary = true, $color = null)
     {
         if (!$uploadedVideos) {
             return [];
@@ -103,6 +106,7 @@ class ProductController extends Controller
                     'url' => $mediaData['url'],
                     'sort_order' => $index,
                     'is_primary' => $setFirstAsPrimary && $index === 0,
+                    'color' => $color,
                 ]);
 
                 $mediaRecords[] = $mediaRecord;
@@ -137,9 +141,116 @@ class ProductController extends Controller
     }
 
     /**
+     * Get available sizes based on category name
+     * Logic is in controller, not model
+     */
+    protected function getSizesByCategory($categoryName)
+    {
+        if (!$categoryName) {
+            return null;
+        }
+
+        $text = strtolower($categoryName);
+
+        // Kids sizes
+        if (strpos($text, 'kid') !== false || strpos($text, 'child') !== false || strpos($text, 'toddler') !== false) {
+            return ['2T', '3T', '4T', '5T', '6T', 'XS', 'S', 'M', 'L', 'XL', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '16'];
+        }
+        
+        // Women sizes
+        if (strpos($text, 'women') !== false || strpos($text, 'woman') !== false || strpos($text, 'ladies') !== false) {
+            return ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', '0', '2', '4', '6', '8', '10', '12', '14', '16', '18', '20', '22', '24'];
+        }
+        
+        // Men sizes
+        if (strpos($text, 'men') !== false || strpos($text, 'man') !== false || strpos($text, 'gentlemen') !== false) {
+            return ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', '28', '30', '32', '34', '36', '38', '40', '42', '44', '46', '48', '50', '52'];
+        }
+        
+        // Default sizes for generic clothing
+        return ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+    }
+
+    /**
+     * Process sizes and colors data
+     */
+    protected function processSizesAndColors($request, $categoryId)
+    {
+        $sizes = null;
+        $colors = null;
+
+        // Get category to determine default sizes
+        if ($categoryId) {
+            $category = Category::find($categoryId);
+            if ($category) {
+                // If sizes are provided in request, use them; otherwise use default based on category
+                if ($request->has('sizes') && is_array($request->sizes) && count($request->sizes) > 0) {
+                    $sizes = $request->sizes;
+                } else {
+                    // Auto-determine sizes based on category name
+                    $defaultSizes = $this->getSizesByCategory($category->name);
+                    if ($defaultSizes) {
+                        $sizes = $defaultSizes;
+                    }
+                }
+            }
+        } else {
+            // If sizes are provided without category, use them
+            if ($request->has('sizes') && is_array($request->sizes) && count($request->sizes) > 0) {
+                $sizes = $request->sizes;
+            }
+        }
+
+        // Process colors
+        if ($request->has('colors') && is_array($request->colors) && count($request->colors) > 0) {
+            $colors = $request->colors;
+        }
+
+        return [
+            'sizes' => $sizes,
+            'colors' => $colors
+        ];
+    }
+
+    /**
+     * Sync product's general stock_quantity with sum of all variations
+     * 
+     * This method calculates the total stock from all product variations
+     * and updates the product's general stock_quantity field.
+     * 
+     * For products with variations:
+     * - products.stock_quantity = sum of all product_variations.stock_quantity
+     * - This represents total available stock across all size-color combinations
+     * - Used as fallback when no specific variation is found
+     * 
+     * For products without variations:
+     * - products.stock_quantity = direct stock quantity
+     * 
+     * @param Product $product
+     * @return void
+     */
+    protected function syncProductStockFromVariations(Product $product): void
+    {
+        // Check if product has variations
+        $variations = ProductVariation::where('product_id', $product->id)->get();
+        
+        if ($variations->isNotEmpty()) {
+            // Calculate total stock from all variations
+            $totalStock = $variations->sum('stock_quantity');
+            $hasInStock = $variations->where('in_stock', true)->isNotEmpty();
+            
+            // Update product's general stock
+            $product->update([
+                'stock_quantity' => $totalStock,
+                'in_stock' => $hasInStock && $totalStock > 0,
+            ]);
+        }
+    }
+
+    /**
      * Display a listing of products
      */
-    public function index(Request $request): Response
+    public function index(Request $request): JsonResponse
     {
         try {
             $query = Product::with(['category', 'media', 'discounts']);
@@ -256,7 +367,7 @@ class ProductController extends Controller
     /**
      * Store a newly created product
      */
-    public function store(Request $request): Response
+    public function store(Request $request): JsonResponse
     {
         try {
             $validator = Validator::make($request->all(), [
@@ -273,6 +384,15 @@ class ProductController extends Controller
                 'is_active' => 'boolean',
                 'weight' => 'nullable|numeric|min:0',
                 'dimensions' => 'nullable|string',
+                'sizes' => 'nullable|array',
+                'sizes.*' => 'string|max:50',
+                'colors' => 'nullable|array',
+                'colors.*' => 'string|max:50',
+                'color_sizes' => 'nullable|array',
+                'color_sizes.*' => 'nullable|array',
+                'color_sizes.*.*' => 'string|max:50',
+                'variation_stock' => 'nullable|array',
+                'variation_stock.*' => 'nullable|integer|min:0',
                 'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
                 'images' => 'nullable|array',
                 'images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:5120',
@@ -285,34 +405,143 @@ class ProductController extends Controller
                 return $this->sendJsonResponse(false, 'Validation failed', ['errors' => $validator->errors()], 422);
             }
 
-            $data = $request->except(['images', 'image', 'videos', 'video']);
+            $data = $request->except(['images', 'image', 'videos', 'video', 'sizes', 'colors', 'color_images', 'color_videos', 'color_sizes', 'variation_stock']);
+            
+            // Ensure description is always present (required field)
+            if (!isset($data['description']) || $data['description'] === null || $data['description'] === '') {
+                $data['description'] = $data['short_description'] ?? $data['name'] ?? 'No description provided';
+            }
+            
+            // Process colors
+            $colors = null;
+            if ($request->has('colors') && is_array($request->colors) && count($request->colors) > 0) {
+                $colors = $request->colors;
+                $data['colors'] = $colors;
+            }
+            
+            // Collect all unique sizes from color_sizes for product.sizes field
+            $allSizes = [];
+            if ($request->has('color_sizes') && is_array($request->color_sizes)) {
+                foreach ($request->color_sizes as $color => $sizes) {
+                    if (is_array($sizes)) {
+                        foreach ($sizes as $size) {
+                            if (!in_array($size, $allSizes)) {
+                                $allSizes[] = $size;
+                            }
+                        }
+                    }
+                }
+            }
+            if (!empty($allSizes)) {
+                $data['sizes'] = $allSizes;
+            }
             
             DB::beginTransaction();
             try {
                 $product = Product::create($data);
                 
-                // Handle single image upload
+                // Create product variations with stock quantities if color_sizes and colors are provided
+                if ($request->has('color_sizes') && is_array($request->color_sizes) && !empty($colors) && $request->has('variation_stock')) {
+                    $colorSizes = $request->input('color_sizes', []);
+                    $variationStock = $request->input('variation_stock', []);
+                    $variations = [];
+                    
+                    foreach ($colors as $color) {
+                        if (isset($colorSizes[$color]) && is_array($colorSizes[$color])) {
+                            foreach ($colorSizes[$color] as $size) {
+                                $key = "{$size}_{$color}";
+                                $stockQuantity = isset($variationStock[$key]) ? (int)$variationStock[$key] : 0;
+                                
+                                $variations[] = [
+                                    'product_id' => $product->id,
+                                    'size' => $size,
+                                    'color' => $color,
+                                    'stock_quantity' => $stockQuantity,
+                                    'in_stock' => $stockQuantity > 0,
+                                    'created_at' => now(),
+                                    'updated_at' => now(),
+                                ];
+                            }
+                        }
+                    }
+                    
+                    if (!empty($variations)) {
+                        ProductVariation::insert($variations);
+                        // Sync general stock from variations
+                        $this->syncProductStockFromVariations($product);
+                    }
+                }
+                
+                // Handle single image upload (general images without color)
                 if ($request->hasFile('image')) {
                     $this->storeProductImages($product, $request->file('image'));
                 }
                 
-                // Handle multiple images upload
+                // Handle multiple images upload (general images without color)
                 if ($request->hasFile('images')) {
                     $this->storeProductImages($product, $request->file('images'));
                 }
+                
+                // Handle color-specific main images
+                if ($request->has('color_main_image') && is_array($request->color_main_image)) {
+                    foreach ($request->color_main_image as $color => $image) {
+                        if ($request->hasFile("color_main_image.{$color}")) {
+                            $mainImage = $request->file("color_main_image.{$color}");
+                            $this->storeProductImages($product, $mainImage, true, $color);
+                        }
+                    }
+                }
 
-                // Handle single video upload
+                // Handle color-specific images
+                if ($request->has('color_images') && is_array($request->color_images)) {
+                    foreach ($request->color_images as $color => $images) {
+                        if ($request->hasFile("color_images.{$color}")) {
+                            $colorImages = $request->file("color_images.{$color}");
+                            if (is_array($colorImages)) {
+                                $this->storeProductImages($product, $colorImages, false, $color);
+                            } else {
+                                $this->storeProductImages($product, [$colorImages], false, $color);
+                            }
+                        }
+                    }
+                }
+
+                // Handle single video upload (general videos without color)
                 if ($request->hasFile('video')) {
                     $this->storeProductVideos($product, $request->file('video'));
                 }
                 
-                // Handle multiple videos upload
+                // Handle multiple videos upload (general videos without color)
                 if ($request->hasFile('videos')) {
                     $this->storeProductVideos($product, $request->file('videos'));
                 }
+                
+                // Handle color-specific main videos
+                if ($request->has('color_main_video') && is_array($request->color_main_video)) {
+                    foreach ($request->color_main_video as $color => $video) {
+                        if ($request->hasFile("color_main_video.{$color}")) {
+                            $mainVideo = $request->file("color_main_video.{$color}");
+                            $this->storeProductVideos($product, $mainVideo, true, $color);
+                        }
+                    }
+                }
+
+                // Handle color-specific videos
+                if ($request->has('color_videos') && is_array($request->color_videos)) {
+                    foreach ($request->color_videos as $color => $videos) {
+                        if ($request->hasFile("color_videos.{$color}")) {
+                            $colorVideos = $request->file("color_videos.{$color}");
+                            if (is_array($colorVideos)) {
+                                $this->storeProductVideos($product, $colorVideos, false, $color);
+                            } else {
+                                $this->storeProductVideos($product, [$colorVideos], false, $color);
+                            }
+                        }
+                    }
+                }
 
                 DB::commit();
-                $product->load(['category', 'media', 'discounts']);
+                $product->load(['category', 'media', 'discounts', 'variations']);
 
                 return $this->sendJsonResponse(true, 'Product created successfully', $product, 201);
             } catch (Exception $e) {
@@ -328,14 +557,14 @@ class ProductController extends Controller
     /**
      * Display the specified product
      */
-    public function show(Request $request): Response
+    public function show(Request $request): JsonResponse
     {
         try {
             $data = $request->validate([
                 'id' => 'required|string'
             ]);
 
-            $product = Product::with(['category', 'media', 'discounts'])->where('uuid', $data['id'])->firstOrFail();
+            $product = Product::with(['category', 'media', 'discounts', 'variations'])->where('uuid', $data['id'])->firstOrFail();
             
             return $this->sendJsonResponse(true, 'Product retrieved successfully', $product);
             
@@ -370,6 +599,15 @@ class ProductController extends Controller
                 'is_active' => 'boolean',
                 'weight' => 'nullable|numeric|min:0',
                 'dimensions' => 'nullable|string',
+                'sizes' => 'nullable|array',
+                'sizes.*' => 'string|max:50',
+                'colors' => 'nullable|array',
+                'colors.*' => 'string|max:50',
+                'color_sizes' => 'nullable|array',
+                'color_sizes.*' => 'nullable|array',
+                'color_sizes.*.*' => 'string|max:50',
+                'variation_stock' => 'nullable|array',
+                'variation_stock.*' => 'nullable|integer|min:0',
                 'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
                 'images' => 'nullable|array',
                 'images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:5120',
@@ -382,41 +620,180 @@ class ProductController extends Controller
                 return $this->sendJsonResponse(false, 'Validation failed', ['errors' => $validator->errors()], 422);
             }
 
-            $updateData = $request->except(['id', 'images', 'image', 'videos', 'video']);
+            $updateData = $request->except(['id', 'images', 'image', 'videos', 'video', 'sizes', 'colors', 'color_images', 'color_videos', 'color_sizes', 'variation_stock']);
+            
+            // Ensure description is always present (required field) - only update if not provided
+            if (!isset($updateData['description']) || $updateData['description'] === null || $updateData['description'] === '') {
+                // Don't update description if it's not in the request (preserve existing)
+                if ($request->has('description')) {
+                    $updateData['description'] = $updateData['short_description'] ?? $product->description ?? 'No description provided';
+                }
+            }
+            
+            // Process colors
+            $colors = null;
+            if ($request->has('colors')) {
+                if (is_array($request->colors) && count($request->colors) > 0) {
+                    $colors = $request->colors;
+                    $updateData['colors'] = $colors;
+                } else {
+                    $updateData['colors'] = null;
+                }
+            }
+            
+            // Collect all unique sizes from color_sizes for product.sizes field
+            $allSizes = [];
+            if ($request->has('color_sizes') && is_array($request->color_sizes)) {
+                foreach ($request->color_sizes as $color => $sizes) {
+                    if (is_array($sizes)) {
+                        foreach ($sizes as $size) {
+                            if (!in_array($size, $allSizes)) {
+                                $allSizes[] = $size;
+                            }
+                        }
+                    }
+                }
+            }
+            if (!empty($allSizes)) {
+                $updateData['sizes'] = $allSizes;
+            } else if ($request->has('color_sizes')) {
+                $updateData['sizes'] = null;
+            }
             
             DB::beginTransaction();
             try {
-                // Handle single image upload
+                // Update product variations with stock quantities if color_sizes, colors, and variation_stock are provided
+                $finalColors = $updateData['colors'] ?? $product->colors ?? [];
+                
+                if ($request->has('color_sizes') && is_array($request->color_sizes) && !empty($finalColors) && $request->has('variation_stock')) {
+                    // Delete existing variations
+                    ProductVariation::where('product_id', $product->id)->delete();
+                    
+                    $colorSizes = $request->input('color_sizes', []);
+                    $variationStock = $request->input('variation_stock', []);
+                    $variations = [];
+                    
+                    foreach ($finalColors as $color) {
+                        if (isset($colorSizes[$color]) && is_array($colorSizes[$color])) {
+                            foreach ($colorSizes[$color] as $size) {
+                                $key = "{$size}_{$color}";
+                                $stockQuantity = isset($variationStock[$key]) ? (int)$variationStock[$key] : 0;
+                                
+                                $variations[] = [
+                                    'product_id' => $product->id,
+                                    'size' => $size,
+                                    'color' => $color,
+                                    'stock_quantity' => $stockQuantity,
+                                    'in_stock' => $stockQuantity > 0,
+                                    'created_at' => now(),
+                                    'updated_at' => now(),
+                                ];
+                            }
+                        }
+                    }
+                    
+                    if (!empty($variations)) {
+                        ProductVariation::insert($variations);
+                    }
+                } else if (empty($finalColors) || !$request->has('color_sizes')) {
+                    // If colors are removed or no color_sizes provided, delete all variations
+                    ProductVariation::where('product_id', $product->id)->delete();
+                }
+                // Handle single image upload (general images without color)
                 if ($request->hasFile('image')) {
-                    // Delete existing images
-                    $this->deleteProductImages($product);
+                    // Delete existing general images (without color)
+                    $product->media()->where('type', 'image')->whereNull('color')->delete();
                     $this->storeProductImages($product, $request->file('image'));
                 }
                 
-                // Handle multiple images upload
+                // Handle multiple images upload (general images without color)
                 if ($request->hasFile('images')) {
-                    // Delete existing images
-                    $this->deleteProductImages($product);
+                    // Delete existing general images (without color)
+                    $product->media()->where('type', 'image')->whereNull('color')->delete();
                     $this->storeProductImages($product, $request->file('images'));
                 }
+                
+                // Handle color-specific main images
+                if ($request->has('color_main_image') && is_array($request->color_main_image)) {
+                    foreach ($request->color_main_image as $color => $image) {
+                        if ($request->hasFile("color_main_image.{$color}")) {
+                            // Delete existing main image for this color
+                            $product->media()->where('type', 'image')->where('color', $color)->where('is_primary', true)->delete();
+                            $mainImage = $request->file("color_main_image.{$color}");
+                            $this->storeProductImages($product, $mainImage, true, $color);
+                        }
+                    }
+                }
 
-                // Handle single video upload
+                // Handle color-specific images
+                if ($request->has('color_images') && is_array($request->color_images)) {
+                    foreach ($request->color_images as $color => $images) {
+                        if ($request->hasFile("color_images.{$color}")) {
+                            // Delete existing non-primary images for this color
+                            $product->media()->where('type', 'image')->where('color', $color)->where('is_primary', false)->delete();
+                            
+                            $colorImages = $request->file("color_images.{$color}");
+                            if (is_array($colorImages)) {
+                                $this->storeProductImages($product, $colorImages, false, $color);
+                            } else {
+                                $this->storeProductImages($product, [$colorImages], false, $color);
+                            }
+                        }
+                    }
+                }
+
+                // Handle single video upload (general videos without color)
                 if ($request->hasFile('video')) {
-                    // Delete existing videos
-                    $this->deleteProductVideos($product);
+                    // Delete existing general videos (without color)
+                    $product->media()->where('type', 'video')->whereNull('color')->delete();
                     $this->storeProductVideos($product, $request->file('video'));
                 }
                 
-                // Handle multiple videos upload
+                // Handle multiple videos upload (general videos without color)
                 if ($request->hasFile('videos')) {
-                    // Delete existing videos
-                    $this->deleteProductVideos($product);
+                    // Delete existing general videos (without color)
+                    $product->media()->where('type', 'video')->whereNull('color')->delete();
                     $this->storeProductVideos($product, $request->file('videos'));
+                }
+                
+                // Handle color-specific main videos
+                if ($request->has('color_main_video') && is_array($request->color_main_video)) {
+                    foreach ($request->color_main_video as $color => $video) {
+                        if ($request->hasFile("color_main_video.{$color}")) {
+                            // Delete existing main video for this color
+                            $product->media()->where('type', 'video')->where('color', $color)->where('is_primary', true)->delete();
+                            $mainVideo = $request->file("color_main_video.{$color}");
+                            $this->storeProductVideos($product, $mainVideo, true, $color);
+                        }
+                    }
+                }
+
+                // Handle color-specific videos
+                if ($request->has('color_videos') && is_array($request->color_videos)) {
+                    foreach ($request->color_videos as $color => $videos) {
+                        if ($request->hasFile("color_videos.{$color}")) {
+                            // Delete existing non-primary videos for this color
+                            $product->media()->where('type', 'video')->where('color', $color)->where('is_primary', false)->delete();
+                            
+                            $colorVideos = $request->file("color_videos.{$color}");
+                            if (is_array($colorVideos)) {
+                                $this->storeProductVideos($product, $colorVideos, false, $color);
+                            } else {
+                                $this->storeProductVideos($product, [$colorVideos], false, $color);
+                            }
+                        }
+                    }
                 }
 
                 $product->update($updateData);
+                
+                // Sync general stock from variations if variations exist
+                if (!empty($finalColors) && $request->has('color_sizes')) {
+                    $this->syncProductStockFromVariations($product);
+                }
+                
                 DB::commit();
-                $product->load(['category', 'media', 'discounts']);
+                $product->load(['category', 'media', 'discounts', 'variations']);
 
                 return $this->sendJsonResponse(true, 'Product updated successfully', $product);
             } catch (Exception $e) {

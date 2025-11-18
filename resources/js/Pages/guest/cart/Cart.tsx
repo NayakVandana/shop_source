@@ -348,6 +348,22 @@ export default function Cart() {
                                                 <Text size="sm" className="text-gray-600 mb-2 line-clamp-2">
                                                     {product?.short_description || product?.description || ''}
                                                 </Text>
+                                                
+                                                {/* Size and Color Display */}
+                                                {(item.size || item.color) && (
+                                                    <div className="flex flex-wrap gap-2 mb-2">
+                                                        {item.size && (
+                                                            <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800">
+                                                                Size: {item.size}
+                                                            </span>
+                                                        )}
+                                                        {item.color && (
+                                                            <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800">
+                                                                Color: {item.color}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                )}
 
 
                                                 {/* Price and Quantity */}

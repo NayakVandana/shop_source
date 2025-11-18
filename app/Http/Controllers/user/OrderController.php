@@ -7,6 +7,7 @@ use App\Models\Cart;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\CouponCode;
+use App\Models\ProductVariation;
 use Illuminate\Http\Request;
 use Exception;
 use Illuminate\Support\Facades\Validator;
@@ -78,9 +79,31 @@ class OrderController extends Controller
                     return $this->sendJsonResponse(false, "Product '{$product->name}' is no longer available", null, 400);
                 }
                 
-                // Check general product stock
-                if ($product->manage_stock && $product->stock_quantity < $item->quantity) {
-                    return $this->sendJsonResponse(false, "Insufficient stock for '{$product->name}'", null, 400);
+                // Check stock - prioritize variation stock if size/color provided
+                if ($product->manage_stock) {
+                    if ($item->size || $item->color) {
+                        $variation = ProductVariation::where('product_id', $product->id)
+                            ->where('size', $item->size ?? null)
+                            ->where('color', $item->color ?? null)
+                            ->first();
+                        
+                        if ($variation) {
+                            if ($variation->stock_quantity < $item->quantity) {
+                                return $this->sendJsonResponse(false, "Insufficient stock for '{$product->name}' (Size: {$item->size}, Color: {$item->color})", null, 400);
+                            }
+                            if (!$variation->in_stock) {
+                                return $this->sendJsonResponse(false, "Size/Color combination for '{$product->name}' is out of stock", null, 400);
+                            }
+                        } else {
+                            if ($product->stock_quantity < $item->quantity) {
+                                return $this->sendJsonResponse(false, "Insufficient stock for '{$product->name}'", null, 400);
+                            }
+                        }
+                    } else {
+                        if ($product->stock_quantity < $item->quantity) {
+                            return $this->sendJsonResponse(false, "Insufficient stock for '{$product->name}'", null, 400);
+                        }
+                    }
                 }
             }
 
@@ -173,11 +196,33 @@ class OrderController extends Controller
                         'subtotal' => $itemSubtotal,
                     ]);
                     
-                    // Update general product stock
+                    // Update stock - prioritize variation stock if size/color provided
                     if ($product->manage_stock) {
-                        $product->decrement('stock_quantity', $cartItem->quantity);
-                        if ($product->stock_quantity <= 0) {
-                            $product->update(['in_stock' => false]);
+                        if ($cartItem->size || $cartItem->color) {
+                            $variation = ProductVariation::where('product_id', $product->id)
+                                ->where('size', $cartItem->size ?? null)
+                                ->where('color', $cartItem->color ?? null)
+                                ->first();
+                            
+                            if ($variation) {
+                                // Update variation stock
+                                $variation->decrement('stock_quantity', $cartItem->quantity);
+                                if ($variation->stock_quantity <= 0) {
+                                    $variation->update(['in_stock' => false]);
+                                }
+                            } else {
+                                // Fallback to general product stock
+                                $product->decrement('stock_quantity', $cartItem->quantity);
+                                if ($product->stock_quantity <= 0) {
+                                    $product->update(['in_stock' => false]);
+                                }
+                            }
+                        } else {
+                            // Update general product stock
+                            $product->decrement('stock_quantity', $cartItem->quantity);
+                            if ($product->stock_quantity <= 0) {
+                                $product->update(['in_stock' => false]);
+                            }
                         }
                     }
                 }

@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Product;
 use App\Models\Category;
+use App\Models\ProductVariation;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
@@ -106,6 +107,8 @@ class DefaultProductsSeeder extends Seeder
                 'is_featured' => false,
                 'is_active' => true,
                 'category_id' => $clothing?->id,
+                'sizes' => ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
+                'colors' => ['Red', 'Blue', 'Black', 'White', 'Gray'],
             ],
             [
                 'uuid' => Str::uuid(),
@@ -124,6 +127,8 @@ class DefaultProductsSeeder extends Seeder
                 'is_featured' => true,
                 'is_active' => true,
                 'category_id' => $clothing?->id,
+                'sizes' => ['28', '30', '32', '34', '36', '38', '40'],
+                'colors' => ['Blue', 'Black', 'Light Blue'],
             ],
 
             // Home & Kitchen
@@ -243,10 +248,49 @@ class DefaultProductsSeeder extends Seeder
             ],
         ];
 
-        foreach ($products as $product) {
-            Product::create($product);
+        foreach ($products as $productData) {
+            $product = Product::create($productData);
+            
+            // Create product variations for clothing products with sizes and colors
+            if ($product->category_id === $clothing?->id && !empty($product->sizes) && !empty($product->colors)) {
+                $variations = [];
+                $totalVariationStock = 0; // Track total stock across all variations
+                
+                foreach ($product->sizes as $size) {
+                    foreach ($product->colors as $color) {
+                        // Random stock quantity between 10-50 for each variation
+                        $stockQuantity = rand(10, 50);
+                        $totalVariationStock += $stockQuantity;
+                        
+                        $variations[] = [
+                            'product_id' => $product->id,
+                            'size' => $size,
+                            'color' => $color,
+                            'stock_quantity' => $stockQuantity,
+                            'in_stock' => $stockQuantity > 0,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ];
+                    }
+                }
+                
+                // Insert variations in batches
+                if (!empty($variations)) {
+                    ProductVariation::insert($variations);
+                    
+                    // Update product's general stock_quantity to sum of all variations
+                    // This represents total available stock across all size-color combinations
+                    // The general stock is used as fallback when no specific variation is found
+                    $product->update([
+                        'stock_quantity' => $totalVariationStock,
+                        'in_stock' => $totalVariationStock > 0,
+                    ]);
+                }
+            }
         }
 
         $this->command->info('Default products seeded successfully!');
+        $this->command->info('Product variations created for clothing products!');
+        $this->command->info('Note: For clothing products, products.stock_quantity = sum of all product_variations.stock_quantity');
     }
 }
