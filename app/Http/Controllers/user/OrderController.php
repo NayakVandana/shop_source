@@ -167,8 +167,6 @@ class OrderController extends Controller
                         'product_id' => $product->id,
                         'product_name' => $product->name,
                         'product_sku' => $product->sku,
-                        'size' => null,
-                        'color' => null,
                         'quantity' => $cartItem->quantity,
                         'price' => $cartItem->price,
                         'discount_amount' => $cartItem->discount_amount,

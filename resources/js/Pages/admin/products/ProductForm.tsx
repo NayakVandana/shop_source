@@ -37,8 +37,6 @@ export default function ProductForm() {
     const [imagesPreview, setImagesPreview] = useState([]);
     const [videoPreview, setVideoPreview] = useState(null);
     const [videosPreview, setVideosPreview] = useState([]);
-    const [sizes, setSizes] = useState([]);
-    const [colors, setColors] = useState([]);
     
     const isEdit = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('id');
     const productId = typeof window !== 'undefined' 
@@ -91,32 +89,6 @@ export default function ProductForm() {
                     dimensions: product.dimensions || '',
                 });
                 
-                // Load existing sizes
-                if (product.sizes && product.sizes.length > 0) {
-                    setSizes(product.sizes.map(size => ({
-                        id: size.id,
-                        size: size.size,
-                        stock_quantity: size.stock_quantity,
-                        is_active: size.is_active,
-                        sort_order: size.sort_order
-                    })));
-                } else {
-                    setSizes([]);
-                }
-
-                // Load existing colors
-                if (product.colors && product.colors.length > 0) {
-                    setColors(product.colors.map(color => ({
-                        id: color.id,
-                        color: color.color,
-                        color_code: color.color_code || '',
-                        stock_quantity: color.stock_quantity,
-                        is_active: color.is_active,
-                        sort_order: color.sort_order
-                    })));
-                } else {
-                    setColors([]);
-                }
                 
                 // Load existing images
                 if (product.media) {
@@ -172,28 +144,6 @@ export default function ProductForm() {
         return localStorage.getItem('admin_token') || '';
     };
 
-    // Get available sizes based on category and product name
-    const getAvailableSizesForCategory = (categoryName, productName = '') => {
-        const text = (categoryName + ' ' + productName).toLowerCase();
-        
-        // Kids sizes
-        if (text.includes('kid') || text.includes('child') || text.includes('toddler')) {
-            return ['2T', '3T', '4T', '5T', '6T', 'XS', 'S', 'M', 'L', 'XL', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '16'];
-        }
-        
-        // Women sizes
-        if (text.includes('women') || text.includes('woman') || text.includes('ladies')) {
-            return ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', '0', '2', '4', '6', '8', '10', '12', '14', '16', '18', '20', '22', '24'];
-        }
-        
-        // Men sizes
-        if (text.includes('men') || text.includes('man') || text.includes('gentlemen')) {
-            return ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', '28', '30', '32', '34', '36', '38', '40', '42', '44', '46', '48', '50', '52'];
-        }
-        
-        // Default sizes for generic clothing
-        return ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
-    };
 
     const handleInputChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -202,38 +152,6 @@ export default function ProductForm() {
             [name]: type === 'checkbox' ? checked : value
         }));
         
-        // Auto-generate sizes when clothing category is selected
-        if (name === 'category_id' && value) {
-            const selectedCategory = categories.find(cat => cat.id == value);
-            if (selectedCategory && selectedCategory.slug === 'clothing') {
-                const availableSizes = getAvailableSizesForCategory(selectedCategory.name, formData.name);
-                const defaultSizes = availableSizes.slice(0, 6).map((size, index) => ({
-                    size: size,
-                    stock_quantity: 10,
-                    is_active: true,
-                    sort_order: index
-                }));
-                setSizes(defaultSizes);
-            } else {
-                // Clear sizes if not clothing category
-                setSizes([]);
-            }
-        }
-        
-        // Auto-update sizes when product name changes (if clothing category is selected)
-        if (name === 'name' && formData.category_id) {
-            const selectedCategory = categories.find(cat => cat.id == formData.category_id);
-            if (selectedCategory && selectedCategory.slug === 'clothing') {
-                const availableSizes = getAvailableSizesForCategory(selectedCategory.name, value);
-                const defaultSizes = availableSizes.slice(0, 6).map((size, index) => ({
-                    size: size,
-                    stock_quantity: sizes[index]?.stock_quantity || 10,
-                    is_active: sizes[index]?.is_active !== undefined ? sizes[index].is_active : true,
-                    sort_order: index
-                }));
-                setSizes(defaultSizes);
-            }
-        }
         
         // Clear field error when user starts typing
         if (errors[name]) {
@@ -473,34 +391,6 @@ export default function ProductForm() {
                 formData.videos.forEach(vid => formDataToSend.append('videos[]', vid));
             }
 
-            // Add sizes data
-            if (sizes.length > 0) {
-                sizes.forEach((sizeItem, index) => {
-                    if (isEdit && sizeItem.id) {
-                        formDataToSend.append(`sizes[${index}][id]`, sizeItem.id);
-                    }
-                    formDataToSend.append(`sizes[${index}][size]`, sizeItem.size);
-                    formDataToSend.append(`sizes[${index}][stock_quantity]`, sizeItem.stock_quantity || 0);
-                    formDataToSend.append(`sizes[${index}][is_active]`, sizeItem.is_active ? '1' : '0');
-                    formDataToSend.append(`sizes[${index}][sort_order]`, sizeItem.sort_order || index);
-                });
-            }
-
-            // Add colors data
-            if (colors.length > 0) {
-                colors.forEach((colorItem, index) => {
-                    if (isEdit && colorItem.id) {
-                        formDataToSend.append(`colors[${index}][id]`, colorItem.id);
-                    }
-                    formDataToSend.append(`colors[${index}][color]`, colorItem.color);
-                    if (colorItem.color_code) {
-                        formDataToSend.append(`colors[${index}][color_code]`, colorItem.color_code);
-                    }
-                    formDataToSend.append(`colors[${index}][stock_quantity]`, colorItem.stock_quantity || 0);
-                    formDataToSend.append(`colors[${index}][is_active]`, colorItem.is_active ? '1' : '0');
-                    formDataToSend.append(`colors[${index}][sort_order]`, colorItem.sort_order || index);
-                });
-            }
 
             const url = isEdit 
                 ? '/api/admin/products/update' 
@@ -691,184 +581,6 @@ export default function ProductForm() {
                                 </div>
                             </Card>
 
-                            {/* Sizes Management - Only show for clothing category */}
-                            {formData.category_id && categories.find(cat => cat.id == formData.category_id)?.slug === 'clothing' && (
-                                <Card>
-                                    <Heading level={2} className="mb-4">Product Sizes</Heading>
-                                    <div className="space-y-4">
-                                        {sizes.length > 0 ? (
-                                            <div className="space-y-3">
-                                                {sizes.map((sizeItem, index) => (
-                                                    <div key={index} className="flex items-center gap-3 p-3 border border-gray-200 rounded-md">
-                                                        <div className="flex-1">
-                                                            <label className="block text-sm font-medium text-gray-700 mb-1">Size</label>
-                                                            <input
-                                                                type="text"
-                                                                value={sizeItem.size}
-                                                                onChange={(e) => {
-                                                                    const newSizes = [...sizes];
-                                                                    newSizes[index].size = e.target.value;
-                                                                    setSizes(newSizes);
-                                                                }}
-                                                                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                                                                placeholder="e.g., S, M, L"
-                                                            />
-                                                        </div>
-                                                        <div className="w-24">
-                                                            <label className="block text-sm font-medium text-gray-700 mb-1">Stock</label>
-                                                            <input
-                                                                type="number"
-                                                                min="0"
-                                                                value={sizeItem.stock_quantity}
-                                                                onChange={(e) => {
-                                                                    const newSizes = [...sizes];
-                                                                    newSizes[index].stock_quantity = parseInt(e.target.value) || 0;
-                                                                    setSizes(newSizes);
-                                                                }}
-                                                                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                                                            />
-                                                        </div>
-                                                        <div className="flex items-center pt-6">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={sizeItem.is_active}
-                                                                onChange={(e) => {
-                                                                    const newSizes = [...sizes];
-                                                                    newSizes[index].is_active = e.target.checked;
-                                                                    setSizes(newSizes);
-                                                                }}
-                                                                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                                                            />
-                                                            <label className="ml-2 text-sm text-gray-700">Active</label>
-                                                        </div>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                                setSizes(sizes.filter((_, i) => i !== index));
-                                                            }}
-                                                            className="px-3 py-2 text-red-600 hover:text-red-800"
-                                                        >
-                                                            Remove
-                                                        </button>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <p className="text-sm text-gray-500">No sizes added. Sizes will be auto-generated when you select a clothing category.</p>
-                                        )}
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setSizes([...sizes, {
-                                                    size: '',
-                                                    stock_quantity: 10,
-                                                    is_active: true,
-                                                    sort_order: sizes.length
-                                                }]);
-                                            }}
-                                            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm font-medium"
-                                        >
-                                            + Add Size
-                                        </button>
-                                    </div>
-                                </Card>
-                            )}
-
-                            {/* Colors Management */}
-                            <Card>
-                                <Heading level={2} className="mb-4">Product Colors</Heading>
-                                <div className="space-y-4">
-                                    {colors.length > 0 ? (
-                                        <div className="space-y-3">
-                                            {colors.map((colorItem, index) => (
-                                                <div key={index} className="flex items-center gap-3 p-3 border border-gray-200 rounded-md">
-                                                    <div className="flex-1">
-                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Color Name</label>
-                                                        <input
-                                                            type="text"
-                                                            value={colorItem.color}
-                                                            onChange={(e) => {
-                                                                const newColors = [...colors];
-                                                                newColors[index].color = e.target.value;
-                                                                setColors(newColors);
-                                                            }}
-                                                            className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                                                            placeholder="e.g., Red, Blue, Black"
-                                                        />
-                                                    </div>
-                                                    <div className="w-32">
-                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Color Code</label>
-                                                        <input
-                                                            type="text"
-                                                            value={colorItem.color_code || ''}
-                                                            onChange={(e) => {
-                                                                const newColors = [...colors];
-                                                                newColors[index].color_code = e.target.value;
-                                                                setColors(newColors);
-                                                            }}
-                                                            className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                                                            placeholder="#FF0000"
-                                                        />
-                                                    </div>
-                                                    <div className="w-24">
-                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Stock</label>
-                                                        <input
-                                                            type="number"
-                                                            min="0"
-                                                            value={colorItem.stock_quantity}
-                                                            onChange={(e) => {
-                                                                const newColors = [...colors];
-                                                                newColors[index].stock_quantity = parseInt(e.target.value) || 0;
-                                                                setColors(newColors);
-                                                            }}
-                                                            className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                                                        />
-                                                    </div>
-                                                    <div className="flex items-center pt-6">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={colorItem.is_active}
-                                                            onChange={(e) => {
-                                                                const newColors = [...colors];
-                                                                newColors[index].is_active = e.target.checked;
-                                                                setColors(newColors);
-                                                            }}
-                                                            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                                                        />
-                                                        <label className="ml-2 text-sm text-gray-700">Active</label>
-                                                    </div>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setColors(colors.filter((_, i) => i !== index));
-                                                        }}
-                                                        className="px-3 py-2 text-red-600 hover:text-red-800"
-                                                    >
-                                                        Remove
-                                                    </button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <p className="text-sm text-gray-500">No colors added. Click "Add Color" to add product colors.</p>
-                                    )}
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setColors([...colors, {
-                                                color: '',
-                                                color_code: '',
-                                                stock_quantity: 10,
-                                                is_active: true,
-                                                sort_order: colors.length
-                                            }]);
-                                        }}
-                                        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm font-medium"
-                                    >
-                                        + Add Color
-                                    </button>
-                                </div>
-                            </Card>
                         </div>
 
                         {/* Sidebar */}

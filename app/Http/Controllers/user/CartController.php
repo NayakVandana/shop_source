@@ -180,7 +180,7 @@ class CartController extends Controller
                             ->first();
 
                         if ($existingItem) {
-                            // Update quantity if product with same size already exists
+                            // Update quantity if product already exists
                             $existingItem->update([
                                 'quantity' => $existingItem->quantity + $guestItem->quantity,
                                 'price' => $guestItem->price, // Use latest price
@@ -303,8 +303,6 @@ class CartController extends Controller
                 $cartItem = CartItem::create([
                     'cart_id' => $cart->id,
                     'product_id' => $product->id,
-                    'size' => null,
-                    'color' => null,
                     'quantity' => $request->quantity,
                     'price' => $finalPrice,
                     'discount_amount' => $discountAmount,

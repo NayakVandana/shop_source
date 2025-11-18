@@ -349,21 +349,6 @@ export default function Cart() {
                                                     {product?.short_description || product?.description || ''}
                                                 </Text>
 
-                                                {/* Size and Color Display */}
-                                                {(item.size || item.color) && (
-                                                    <div className="mb-2 flex flex-wrap gap-3">
-                                                        {item.size && (
-                                                            <Text size="sm" className="text-gray-700">
-                                                                <span className="font-medium">Size:</span> {item.size}
-                                                            </Text>
-                                                        )}
-                                                        {item.color && (
-                                                            <Text size="sm" className="text-gray-700">
-                                                                <span className="font-medium">Color:</span> {item.color}
-                                                            </Text>
-                                                        )}
-                                                    </div>
-                                                )}
 
                                                 {/* Price and Quantity */}
                                                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-4">
