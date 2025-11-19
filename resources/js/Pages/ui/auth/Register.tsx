@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import { FormEvent } from 'react';
-import GuestLayout from '../../../Layouts/GuestLayout';
+import AppLayout from '../../../Layouts/AppLayout';
 import FormInput from '../../../Components/FormInputs/FormInput';
 import Button from '../../../Components/ui/Button';
 
@@ -52,7 +52,7 @@ export default function Register() {
     };
 
     return (
-        <GuestLayout>
+        <AppLayout>
             <Head title="Register" />
             <div className="flex items-center justify-center py-8 px-4 sm:py-12 sm:px-6 lg:px-8 min-h-[calc(100vh-200px)]">
                 <div className="max-w-md w-full space-y-6 sm:space-y-8">
@@ -125,7 +125,7 @@ export default function Register() {
                     </form>
                 </div>
             </div>
-        </GuestLayout>
+        </AppLayout>
     );
 }
 

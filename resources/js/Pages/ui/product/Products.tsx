@@ -2,8 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import axios from 'axios';
-import UserLayout from '../../../Layouts/UserLayout';
-import GuestLayout from '../../../Layouts/GuestLayout';
+import AppLayout from '../../../Layouts/AppLayout';
 import Card from '../../../Components/ui/Card';
 import { Heading, Text } from '../../../Components/ui/Typography';
 
@@ -149,15 +148,9 @@ export default function Products() {
 	return (
 		<>
 			<Head title="Products" />
-			{user ? (
-				<UserLayout>
-					{renderContent()}
-				</UserLayout>
-			) : (
-				<GuestLayout>
-					{renderContent()}
-				</GuestLayout>
-			)}
+			<AppLayout>
+				{renderContent()}
+			</AppLayout>
 		</>
 	);
 }

@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\Route;
 
     // Product Routes (Public - alias for /api/products/index)
     Route::post('/products/list', [\App\Http\Controllers\Api\ProductController::class, 'index']);
+    Route::post('/products/show', [\App\Http\Controllers\Api\ProductController::class, 'show']);
 
     // Protected User Routes
     Route::middleware(['user.verify', 'uuid.validate'])->group(function () {

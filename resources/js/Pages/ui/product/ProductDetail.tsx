@@ -2,8 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import axios from 'axios';
-import UserLayout from '../../../Layouts/UserLayout';
-import GuestLayout from '../../../Layouts/GuestLayout';
+import AppLayout from '../../../Layouts/AppLayout';
 import Button from '../../../Components/ui/Button';
 
 export default function ProductDetail() {
@@ -310,15 +309,9 @@ export default function ProductDetail() {
         return (
             <>
                 <Head title="Loading..." />
-                {user ? (
-                    <UserLayout>
-                        {loadingContent}
-                    </UserLayout>
-                ) : (
-                    <GuestLayout>
-                        {loadingContent}
-                    </GuestLayout>
-                )}
+                <AppLayout>
+                    {loadingContent}
+                </AppLayout>
             </>
         );
     }
@@ -341,15 +334,9 @@ export default function ProductDetail() {
         return (
             <>
                 <Head title="Product Not Found" />
-                {user ? (
-                    <UserLayout>
-                        {notFoundContent}
-                    </UserLayout>
-                ) : (
-                    <GuestLayout>
-                        {notFoundContent}
-                    </GuestLayout>
-                )}
+                <AppLayout>
+                    {notFoundContent}
+                </AppLayout>
             </>
         );
     }
@@ -701,15 +688,9 @@ export default function ProductDetail() {
     return (
         <>
             <Head title={product.name} />
-            {user ? (
-                <UserLayout>
-                    {productContent}
-                </UserLayout>
-            ) : (
-                <GuestLayout>
-                    {productContent}
-                </GuestLayout>
-            )}
+            <AppLayout>
+                {productContent}
+            </AppLayout>
         </>
     );
 }

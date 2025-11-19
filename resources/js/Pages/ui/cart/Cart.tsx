@@ -2,8 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import axios from 'axios';
-import UserLayout from '../../../Layouts/UserLayout';
-import GuestLayout from '../../../Layouts/GuestLayout';
+import AppLayout from '../../../Layouts/AppLayout';
 import Button from '../../../Components/ui/Button';
 import { Heading, Text } from '../../../Components/ui/Typography';
 import Card from '../../../Components/ui/Card';
@@ -486,15 +485,9 @@ export default function Cart() {
     return (
         <>
             <Head title="Shopping Cart" />
-            {user ? (
-                <UserLayout>
-                    {renderContent()}
-                </UserLayout>
-            ) : (
-                <GuestLayout>
-                    {renderContent()}
-                </GuestLayout>
-            )}
+            <AppLayout>
+                {renderContent()}
+            </AppLayout>
         </>
     );
 }

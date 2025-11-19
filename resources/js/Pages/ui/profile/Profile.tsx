@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Head } from '@inertiajs/react';
 import axios from 'axios';
-import GuestLayout from '../../../Layouts/GuestLayout';
+import AppLayout from '../../../Layouts/AppLayout';
 import FormInput from '../../../Components/FormInputs/FormInput';
 import Button from '../../../Components/ui/Button';
 import Card from '../../../Components/ui/Card';
@@ -113,19 +113,19 @@ export default function Profile() {
 
     if (loading) {
         return (
-            <GuestLayout>
+            <AppLayout>
                 <Head title="Profile" />
                 <div className="flex items-center justify-center py-8 px-4 sm:py-12 sm:px-6 lg:px-8 min-h-[calc(100vh-200px)]">
                     <div className="text-center">
                         <div className="text-indigo-600 text-lg sm:text-xl md:text-2xl">Loading profile...</div>
                     </div>
                 </div>
-            </GuestLayout>
+            </AppLayout>
         );
     }
 
     return (
-        <GuestLayout>
+        <AppLayout>
             <Head title="Profile" />
             <div className="flex items-center justify-center py-8 px-4 sm:py-12 sm:px-6 lg:px-8 min-h-[calc(100vh-200px)]">
                 <div className="max-w-md w-full">
@@ -200,7 +200,7 @@ export default function Profile() {
                     </Card>
                 </div>
             </div>
-        </GuestLayout>
+        </AppLayout>
     );
 }
 
