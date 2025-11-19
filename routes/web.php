@@ -48,6 +48,11 @@ Route::get('/profile', function () {
     return Inertia::render('ui/profile/Profile');
 })->name('profile');
 
+// Recently Viewed Products
+Route::get('/recently-viewed', function () {
+    return Inertia::render('ui/recentlyViewed/RecentlyViewed');
+})->name('recently-viewed');
+
 // User Products - Redirect to products page
 Route::get('/dashboard', function () {
     return redirect('/products');

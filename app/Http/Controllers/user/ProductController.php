@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\Category;
 use App\Models\Discount;
+use App\Models\RecentlyViewedProduct;
 use Illuminate\Http\Request;
 use Exception;
+use Illuminate\Support\Facades\DB;
 
 class ProductController extends Controller
 {
@@ -207,6 +209,230 @@ class ProductController extends Controller
             $formattedProduct = $this->formatProductData($product);
             
             return $this->sendJsonResponse(true, 'Product retrieved successfully', $formattedProduct);
+        } catch (Exception $e) {
+            return $this->sendError($e);
+        }
+    }
+
+    /**
+     * Track a product view
+     */
+    public function trackView(Request $request)
+    {
+        try {
+            $data = $request->validate([
+                'product_id' => 'required|string'
+            ]);
+
+            $user = $request->user();
+            $sessionId = null;
+            
+            // Get session ID for guest users
+            if (!$user) {
+                try {
+                    if ($request->hasSession()) {
+                        $sessionId = $request->session()->getId();
+                    }
+                } catch (\Exception $e) {
+                    // Session not available
+                }
+                if (!$sessionId) {
+                    $sessionId = $request->cookie('cart_session_id');
+                }
+            }
+
+            // Find product by UUID
+            $product = Product::where('uuid', $data['product_id'])->first();
+            if (!$product) {
+                return $this->sendJsonResponse(false, 'Product not found', null, 404);
+            }
+
+            // Use updateOrCreate to handle duplicates
+            $recentlyViewed = RecentlyViewedProduct::updateOrCreate(
+                [
+                    'user_id' => $user ? $user->id : null,
+                    'session_id' => $sessionId,
+                    'product_id' => $product->id,
+                ],
+                [
+                    'viewed_at' => now(),
+                ]
+            );
+
+            // Limit to 20 most recent views per user/session (across all products)
+            $query = RecentlyViewedProduct::query();
+            if ($user) {
+                $query->where('user_id', $user->id);
+            } else {
+                if ($sessionId) {
+                    $query->where('session_id', $sessionId);
+                }
+            }
+            
+            $totalViews = $query->count();
+            if ($totalViews > 20) {
+                // Delete oldest views
+                $oldestViews = $query->orderBy('viewed_at', 'asc')
+                    ->limit($totalViews - 20)
+                    ->pluck('id');
+                RecentlyViewedProduct::whereIn('id', $oldestViews)->delete();
+            }
+
+            return $this->sendJsonResponse(true, 'Product view tracked successfully', $recentlyViewed);
+        } catch (Exception $e) {
+            return $this->sendError($e);
+        }
+    }
+
+    /**
+     * Get recently viewed products
+     */
+    public function recentlyViewed(Request $request)
+    {
+        try {
+            $user = $request->user();
+            $sessionId = null;
+            
+            // Get session ID for guest users
+            if (!$user) {
+                try {
+                    if ($request->hasSession()) {
+                        $sessionId = $request->session()->getId();
+                    }
+                } catch (\Exception $e) {
+                    // Session not available
+                }
+                if (!$sessionId) {
+                    $sessionId = $request->cookie('cart_session_id');
+                }
+            }
+
+            $query = RecentlyViewedProduct::with(['product.category', 'product.media', 'product.discounts'])
+                ->whereHas('product', function($q) {
+                    $q->where('is_active', true);
+                })
+                ->orderBy('viewed_at', 'desc');
+
+            if ($user) {
+                $query->where('user_id', $user->id);
+            } else {
+                if ($sessionId) {
+                    $query->where('session_id', $sessionId);
+                } else {
+                    // No session ID, return empty
+                    return $this->sendJsonResponse(true, 'No recently viewed products', []);
+                }
+            }
+
+            $limit = $request->get('limit', 10);
+            $recentlyViewed = $query->limit($limit)->get();
+
+            // Format products
+            $formattedProducts = $recentlyViewed->map(function ($item) {
+                return $this->formatProductData($item->product);
+            });
+
+            return $this->sendJsonResponse(true, 'Recently viewed products retrieved successfully', $formattedProducts);
+        } catch (Exception $e) {
+            return $this->sendError($e);
+        }
+    }
+
+    /**
+     * Remove a product from recently viewed
+     */
+    public function removeRecentlyViewed(Request $request)
+    {
+        try {
+            $data = $request->validate([
+                'product_id' => 'required|string'
+            ]);
+
+            $user = $request->user();
+            $sessionId = null;
+            
+            // Get session ID for guest users
+            if (!$user) {
+                try {
+                    if ($request->hasSession()) {
+                        $sessionId = $request->session()->getId();
+                    }
+                } catch (\Exception $e) {
+                    // Session not available
+                }
+                if (!$sessionId) {
+                    $sessionId = $request->cookie('cart_session_id');
+                }
+            }
+
+            // Find product by UUID
+            $product = Product::where('uuid', $data['product_id'])->first();
+            if (!$product) {
+                return $this->sendJsonResponse(false, 'Product not found', null, 404);
+            }
+
+            $query = RecentlyViewedProduct::where('product_id', $product->id);
+            
+            if ($user) {
+                $query->where('user_id', $user->id);
+            } else {
+                if ($sessionId) {
+                    $query->where('session_id', $sessionId);
+                } else {
+                    return $this->sendJsonResponse(false, 'Session not found', null, 404);
+                }
+            }
+
+            $deleted = $query->delete();
+
+            if ($deleted) {
+                return $this->sendJsonResponse(true, 'Product removed from recently viewed successfully', null);
+            } else {
+                return $this->sendJsonResponse(false, 'Product not found in recently viewed', null, 404);
+            }
+        } catch (Exception $e) {
+            return $this->sendError($e);
+        }
+    }
+
+    /**
+     * Clear all recently viewed products
+     */
+    public function clearRecentlyViewed(Request $request)
+    {
+        try {
+            $user = $request->user();
+            $sessionId = null;
+            
+            // Get session ID for guest users
+            if (!$user) {
+                try {
+                    if ($request->hasSession()) {
+                        $sessionId = $request->session()->getId();
+                    }
+                } catch (\Exception $e) {
+                    // Session not available
+                }
+                if (!$sessionId) {
+                    $sessionId = $request->cookie('cart_session_id');
+                }
+            }
+
+            $query = RecentlyViewedProduct::query();
+            
+            if ($user) {
+                $query->where('user_id', $user->id);
+            } else {
+                if ($sessionId) {
+                    $query->where('session_id', $sessionId);
+                } else {
+                    return $this->sendJsonResponse(false, 'Session not found', null, 404);
+                }
+            }
+
+            $deleted = $query->delete();
+
+            return $this->sendJsonResponse(true, 'All recently viewed products cleared successfully', ['deleted_count' => $deleted]);
         } catch (Exception $e) {
             return $this->sendError($e);
         }

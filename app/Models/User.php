@@ -73,6 +73,14 @@ class User extends Authenticatable
         return $this->hasMany(Order::class);
     }
 
+    /**
+     * Get user recently viewed products relationship
+     */
+    public function recentlyViewedProducts(): HasMany
+    {
+        return $this->hasMany(RecentlyViewedProduct::class)->orderBy('viewed_at', 'desc');
+    }
+
 
     public function getRouteKeyName()
     {

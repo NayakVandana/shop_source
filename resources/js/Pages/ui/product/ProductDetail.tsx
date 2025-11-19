@@ -4,6 +4,7 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import axios from 'axios';
 import AppLayout from '../../../Layouts/AppLayout';
 import Button from '../../../Components/ui/Button';
+import recentlyViewedService from '../recentlyViewed/useRecentlyViewedStore';
 
 export default function ProductDetail() {
     const { auth } = usePage().props;
@@ -153,6 +154,16 @@ export default function ProductDetail() {
             setLoading(false);
         }
     }, []);
+
+    // Track product view when product is loaded
+    useEffect(() => {
+        if (product && product.uuid) {
+            recentlyViewedService.trackView({ product_id: product.uuid }).catch(error => {
+                // Silently fail - tracking is not critical
+                console.debug('Error tracking product view:', error);
+            });
+        }
+    }, [product]);
 
     // Update image when product loads or color changes
     useEffect(() => {

@@ -5,6 +5,7 @@ import axios from 'axios';
 import AppLayout from '../../../Layouts/AppLayout';
 import Card from '../../../Components/ui/Card';
 import { Heading, Text } from '../../../Components/ui/Typography';
+import RecentlyViewedSection from '../recentlyViewed/components/RecentlyViewedSection';
 
 export default function Products() {
 	const { auth } = usePage().props;
@@ -98,6 +99,15 @@ export default function Products() {
 								Discover our amazing collection of products
 							</Text>
 						</div>
+
+						{/* Recently Viewed Section */}
+						{!debouncedSearchTerm && (
+							<RecentlyViewedSection
+								limit={8}
+								variant="compact"
+								showViewAll={true}
+							/>
+						)}
 
 						{/* Search Bar */}
 						<div className="mb-6 sm:mb-8 max-w-2xl mx-auto">

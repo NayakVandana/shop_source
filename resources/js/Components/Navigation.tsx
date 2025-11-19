@@ -303,6 +303,16 @@ export default function Navigation({ user }) {
 					<div className="hidden lg:flex items-center space-x-4">
 						
 						<Link
+							href="/recently-viewed"
+							className="text-text-primary hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium"
+							title="Recently Viewed"
+						>
+							<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+							</svg>
+						</Link>
+						<Link
 							href="/cart"
 							className="relative text-text-primary hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium"
 						>
@@ -367,6 +377,17 @@ export default function Navigation({ user }) {
 
 					{/* Mobile nav - Cart and hamburger */}
 					<div className="flex lg:hidden items-center space-x-2">
+						{/* Recently Viewed icon */}
+						<Link
+							href="/recently-viewed"
+							className="inline-flex items-center justify-center p-2 rounded-md text-text-primary hover:text-primary-600 hover:bg-secondary-100 active:bg-secondary-200 focus:outline-none focus:ring-2 focus:ring-primary-500 touch-manipulation min-w-[44px] min-h-[44px]"
+							title="Recently Viewed"
+						>
+							<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+							</svg>
+						</Link>
 						{/* Cart icon - matches desktop nav */}
 						<Link
 							href="/cart"
@@ -410,8 +431,18 @@ export default function Navigation({ user }) {
 			{/* Mobile menu panel */}
 			<div id="mobile-menu" className={`${isMobileOpen ? 'block' : 'hidden'} lg:hidden`}>
 				<div ref={mobileMenuRef} className="space-y-1 px-3 sm:px-4 pt-2 pb-4 border-t border-border-default bg-background shadow-lg">
-					{/* Cart - matches desktop nav */}
-					
+					{/* Recently Viewed - matches desktop nav */}
+					<Link
+						href="/recently-viewed"
+						className="flex items-center px-3 py-3 hover:bg-secondary-50 active:bg-secondary-100 rounded-md touch-manipulation min-h-[44px]"
+						onClick={() => setIsMobileOpen(false)}
+					>
+						<svg className="w-6 h-6 text-text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+						</svg>
+						<span className="ml-3 text-text-primary text-base font-medium">Recently Viewed</span>
+					</Link>
 
 					{/* User section - matches desktop nav */}
 					{user && user.name ? (

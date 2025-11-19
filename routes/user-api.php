@@ -23,6 +23,14 @@ use Illuminate\Support\Facades\Route;
     // Product Routes (Public - alias for /api/products/index)
     Route::post('/products/list', [\App\Http\Controllers\Api\ProductController::class, 'index']);
     Route::post('/products/show', [\App\Http\Controllers\Api\ProductController::class, 'show']);
+    
+    // Recently Viewed Products Routes (Public - works with session for guests)
+    Route::middleware([\Illuminate\Session\Middleware\StartSession::class])->group(function () {
+        Route::post('/products/track-view', [\App\Http\Controllers\user\ProductController::class, 'trackView']);
+        Route::post('/products/recently-viewed', [\App\Http\Controllers\user\ProductController::class, 'recentlyViewed']);
+        Route::post('/products/remove-recently-viewed', [\App\Http\Controllers\user\ProductController::class, 'removeRecentlyViewed']);
+        Route::post('/products/clear-recently-viewed', [\App\Http\Controllers\user\ProductController::class, 'clearRecentlyViewed']);
+    });
 
     // Protected User Routes
     Route::middleware(['user.verify', 'uuid.validate'])->group(function () {
