@@ -365,8 +365,23 @@ export default function Navigation({ user }) {
 						)}
 					</div>
 
-					{/* Mobile hamburger */}
-					<div className="flex lg:hidden items-center">
+					{/* Mobile nav - Cart and hamburger */}
+					<div className="flex lg:hidden items-center space-x-2">
+						{/* Cart icon - matches desktop nav */}
+						<Link
+							href="/cart"
+							className="relative inline-flex items-center justify-center p-2 rounded-md text-text-primary hover:text-primary-600 hover:bg-secondary-100 active:bg-secondary-200 focus:outline-none focus:ring-2 focus:ring-primary-500 touch-manipulation min-w-[44px] min-h-[44px]"
+						>
+							<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+							</svg>
+							{cartCount > 0 && (
+								<span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+									{cartCount > 99 ? '99+' : cartCount}
+								</span>
+							)}
+						</Link>
+						{/* Hamburger menu button */}
 						<button
 							ref={menuButtonRef}
 							type="button"
@@ -395,31 +410,13 @@ export default function Navigation({ user }) {
 			{/* Mobile menu panel */}
 			<div id="mobile-menu" className={`${isMobileOpen ? 'block' : 'hidden'} lg:hidden`}>
 				<div ref={mobileMenuRef} className="space-y-1 px-3 sm:px-4 pt-2 pb-4 border-t border-border-default bg-background shadow-lg">
-					<Link
-						href="/products"
-						className="block text-text-primary hover:text-primary-600 hover:bg-secondary-50 active:bg-secondary-100 px-3 py-3 rounded-md text-base font-medium touch-manipulation min-h-[44px] flex items-center"
-						onClick={() => setIsMobileOpen(false)}
-					>
-						Products
-					</Link>
-					<Link
-						href="/cart"
-						className="relative block text-text-primary hover:text-primary-600 hover:bg-secondary-50 active:bg-secondary-100 px-3 py-3 rounded-md text-base font-medium touch-manipulation min-h-[44px] flex items-center"
-						onClick={() => setIsMobileOpen(false)}
-					>
-						<svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-						</svg>
-						Cart
-						{cartCount > 0 && (
-							<span className="ml-2 bg-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-								{cartCount > 99 ? '99+' : cartCount}
-							</span>
-						)}
-					</Link>
+					{/* Cart - matches desktop nav */}
+					
 
+					{/* User section - matches desktop nav */}
 					{user && user.name ? (
-						<div className="pt-2 border-t border-border-default">
+						<div className="pt-2 border-t border-border-default space-y-2">
+							{/* Admin Panel - matches desktop nav */}
 							{isAdmin && (
 								<a
 									href={adminPanelUrl}
@@ -427,11 +424,12 @@ export default function Navigation({ user }) {
 										setIsMobileOpen(false);
 										handleAdminPanelClick(e);
 									}}
-									className="block text-primary-600 hover:text-primary-700 hover:bg-primary-50 active:bg-primary-100 px-3 py-3 rounded-md text-base font-medium border border-primary-600 touch-manipulation min-h-[44px] flex items-center mb-2"
+									className="block text-primary-600 hover:text-primary-700 hover:bg-primary-50 active:bg-primary-100 px-3 py-3 rounded-md text-base font-medium border border-primary-600 touch-manipulation min-h-[44px] flex items-center"
 								>
 									Admin Panel
 								</a>
 							)}
+							{/* Profile - matches desktop nav */}
 							<Link
 								href="/profile"
 								className="flex items-center px-3 py-3 hover:bg-secondary-50 active:bg-secondary-100 rounded-md touch-manipulation min-h-[44px]"
@@ -446,17 +444,20 @@ export default function Navigation({ user }) {
 									{user.name}
 								</span>
 							</Link>
-							<div className="px-3 pb-2">
+							{/* Logout - matches desktop nav */}
+							<div className="px-3">
 								<Button
 									onClick={() => { setIsMobileOpen(false); handleLogout(); }}
 									variant="danger"
 									block
+									size="sm"
 								>
 									Logout
 								</Button>
 							</div>
 						</div>
 					) : (
+						/* Guest section - matches desktop nav */
 						<div className="pt-2 border-t border-border-default space-y-2">
 							<Link
 								href="/login"
