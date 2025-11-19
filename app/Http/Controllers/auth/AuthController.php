@@ -322,4 +322,31 @@ class AuthController extends Controller
             return $this->sendError($e);
         }
     }
+
+    public function updateProfile(Request $request)
+    {
+        try {
+            $user = auth()->user();
+
+            $validator = Validator::make($request->all(), [
+                'name' => 'sometimes|required|string|max:255',
+                'email' => 'sometimes|required|email|max:191|unique:users,email,' . $user->id,
+                'mobile' => 'nullable|string|max:20|unique:users,mobile,' . $user->id,
+            ]);
+
+            if ($validator->fails()) {
+                return $this->sendJsonResponse(false, 'Validation failed', ['errors' => $validator->errors()], 422);
+            }
+
+            $updateData = $request->only(['name', 'email', 'mobile']);
+            $user->update($updateData);
+
+            // Remove sensitive data
+            unset($user->password);
+
+            return $this->sendJsonResponse(true, 'Profile updated successfully', $user, 200);
+        } catch (Exception $e) {
+            return $this->sendError($e);
+        }
+    }
 }

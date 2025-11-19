@@ -294,25 +294,14 @@ export default function Navigation({ user }) {
 			<div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
 				<div className="flex justify-between h-14 sm:h-16">
 					<div className="flex items-center">
-						<Link href="/" className="text-lg sm:text-xl font-bold text-primary-600 touch-manipulation">
+						<Link href="/products" className="text-lg sm:text-xl font-bold text-primary-600 touch-manipulation">
 							ShopSource
 						</Link>
 					</div>
 
 					{/* Desktop nav */}
 					<div className="hidden lg:flex items-center space-x-4">
-						<Link
-							href="/"
-							className="text-text-primary hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium"
-						>
-							Home
-						</Link>
-						<Link
-							href="/products"
-							className="text-text-primary hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium"
-						>
-							Products
-						</Link>
+						
 						<Link
 							href="/cart"
 							className="relative text-text-primary hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium"
@@ -338,11 +327,14 @@ export default function Navigation({ user }) {
 									</a>
 								)}
 								<div className="flex items-center">
-									<div className="h-8 w-8 bg-primary-600 rounded-full flex items-center justify-center">
+									<Link
+										href="/profile"
+										className="h-8 w-8 bg-primary-600 rounded-full flex items-center justify-center hover:bg-primary-700 transition-colors cursor-pointer"
+									>
 										<span className="text-text-inverse text-sm font-medium">
 											{user.name.charAt(0).toUpperCase()}
 										</span>
-									</div>
+									</Link>
 									<span className="ml-2 text-text-primary">
 										{user.name}
 									</span>
@@ -404,13 +396,6 @@ export default function Navigation({ user }) {
 			<div id="mobile-menu" className={`${isMobileOpen ? 'block' : 'hidden'} lg:hidden`}>
 				<div ref={mobileMenuRef} className="space-y-1 px-3 sm:px-4 pt-2 pb-4 border-t border-border-default bg-background shadow-lg">
 					<Link
-						href="/"
-						className="block text-text-primary hover:text-primary-600 hover:bg-secondary-50 active:bg-secondary-100 px-3 py-3 rounded-md text-base font-medium touch-manipulation min-h-[44px] flex items-center"
-						onClick={() => setIsMobileOpen(false)}
-					>
-						Home
-					</Link>
-					<Link
 						href="/products"
 						className="block text-text-primary hover:text-primary-600 hover:bg-secondary-50 active:bg-secondary-100 px-3 py-3 rounded-md text-base font-medium touch-manipulation min-h-[44px] flex items-center"
 						onClick={() => setIsMobileOpen(false)}
@@ -447,8 +432,12 @@ export default function Navigation({ user }) {
 									Admin Panel
 								</a>
 							)}
-							<div className="flex items-center px-3 py-3">
-								<div className="h-9 w-9 sm:h-10 sm:w-10 bg-primary-600 rounded-full flex items-center justify-center flex-shrink-0">
+							<Link
+								href="/profile"
+								className="flex items-center px-3 py-3 hover:bg-secondary-50 active:bg-secondary-100 rounded-md touch-manipulation min-h-[44px]"
+								onClick={() => setIsMobileOpen(false)}
+							>
+								<div className="h-9 w-9 sm:h-10 sm:w-10 bg-primary-600 rounded-full flex items-center justify-center flex-shrink-0 hover:bg-primary-700 transition-colors cursor-pointer">
 									<span className="text-text-inverse text-sm font-medium">
 										{user.name.charAt(0).toUpperCase()}
 									</span>
@@ -456,7 +445,7 @@ export default function Navigation({ user }) {
 								<span className="ml-3 text-text-primary text-base font-medium truncate">
 									{user.name}
 								</span>
-							</div>
+							</Link>
 							<div className="px-3 pb-2">
 								<Button
 									onClick={() => { setIsMobileOpen(false); handleLogout(); }}

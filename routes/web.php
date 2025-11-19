@@ -11,7 +11,7 @@ use Inertia\Inertia;
 
 // Home & Public Pages (Guest)
 Route::get('/', function () {
-    return Inertia::render('ui/home/Home');
+    return redirect('/products');
 })->name('home');
 
 Route::get('/products', function () {
@@ -42,6 +42,11 @@ Route::get('/login', function () {
 Route::get('/register', function () {
     return Inertia::render('ui/auth/Register');
 })->name('register');
+
+// User Profile
+Route::get('/profile', function () {
+    return Inertia::render('ui/profile/Profile');
+})->name('profile');
 
 // User Products - Redirect to products page
 Route::get('/dashboard', function () {

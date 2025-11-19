@@ -26,8 +26,7 @@ export default function BaseLayout({ children, is404 = false }: BaseLayoutProps)
                             <div className="text-3xl font-bold text-gray-900 mb-2">404</div>
                             <div className="text-lg text-gray-600 mb-6">Page not found</div>
                             <div className="space-x-4">
-                                <a href="/" className="text-indigo-600 hover:text-indigo-500 font-medium">Go home</a>
-                                <a href="/products" className="text-gray-600 hover:text-gray-500 font-medium">Browse products</a>
+                                <a href="/products" className="text-indigo-600 hover:text-indigo-500 font-medium">Go to products</a>
                             </div>
                         </div>
                     </div>
