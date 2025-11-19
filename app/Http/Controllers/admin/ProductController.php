@@ -9,8 +9,6 @@ use App\Models\ProductMedia;
 use App\Models\ProductVariation;
 use App\Helpers\MediaStorageService;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
@@ -250,7 +248,7 @@ class ProductController extends Controller
     /**
      * Display a listing of products
      */
-    public function index(Request $request): JsonResponse
+    public function index(Request $request)
     {
         try {
             $query = Product::with(['category', 'media', 'discounts']);
@@ -367,7 +365,7 @@ class ProductController extends Controller
     /**
      * Store a newly created product
      */
-    public function store(Request $request): JsonResponse
+    public function store(Request $request)
     {
         try {
             $validator = Validator::make($request->all(), [
@@ -377,7 +375,7 @@ class ProductController extends Controller
                 'price' => 'required|numeric|min:0',
                 'sale_price' => 'nullable|numeric|min:0',
                 'category_id' => 'required|exists:categories,id',
-                'stock_quantity' => 'required|integer|min:0',
+                'stock_quantity' => 'required|integer|min:1',
                 'manage_stock' => 'boolean',
                 'in_stock' => 'boolean',
                 'is_featured' => 'boolean',
@@ -392,7 +390,7 @@ class ProductController extends Controller
                 'color_sizes.*' => 'nullable|array',
                 'color_sizes.*.*' => 'string|max:50',
                 'variation_stock' => 'nullable|array',
-                'variation_stock.*' => 'nullable|integer|min:0',
+                'variation_stock.*' => 'nullable|integer|min:1',
                 'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
                 'images' => 'nullable|array',
                 'images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:5120',
@@ -452,15 +450,18 @@ class ProductController extends Controller
                                 $key = "{$size}_{$color}";
                                 $stockQuantity = isset($variationStock[$key]) ? (int)$variationStock[$key] : 0;
                                 
-                                $variations[] = [
-                                    'product_id' => $product->id,
-                                    'size' => $size,
-                                    'color' => $color,
-                                    'stock_quantity' => $stockQuantity,
-                                    'in_stock' => $stockQuantity > 0,
-                                    'created_at' => now(),
-                                    'updated_at' => now(),
-                                ];
+                                // Only create variation if stock quantity is greater than 0
+                                if ($stockQuantity > 0) {
+                                    $variations[] = [
+                                        'product_id' => $product->id,
+                                        'size' => $size,
+                                        'color' => $color,
+                                        'stock_quantity' => $stockQuantity,
+                                        'in_stock' => true,
+                                        'created_at' => now(),
+                                        'updated_at' => now(),
+                                    ];
+                                }
                             }
                         }
                     }
@@ -557,7 +558,7 @@ class ProductController extends Controller
     /**
      * Display the specified product
      */
-    public function show(Request $request): JsonResponse
+    public function show(Request $request)
     {
         try {
             $data = $request->validate([
@@ -576,7 +577,7 @@ class ProductController extends Controller
     /**
      * Update the specified product
      */
-    public function update(Request $request): Response
+    public function update(Request $request)
     {
         try {
             $data = $request->validate([
@@ -592,7 +593,7 @@ class ProductController extends Controller
                 'price' => 'sometimes|required|numeric|min:0',
                 'sale_price' => 'nullable|numeric|min:0',
                 'category_id' => 'sometimes|required|exists:categories,id',
-                'stock_quantity' => 'sometimes|required|integer|min:0',
+                'stock_quantity' => 'sometimes|required|integer|min:1',
                 'manage_stock' => 'boolean',
                 'in_stock' => 'boolean',
                 'is_featured' => 'boolean',
@@ -607,7 +608,7 @@ class ProductController extends Controller
                 'color_sizes.*' => 'nullable|array',
                 'color_sizes.*.*' => 'string|max:50',
                 'variation_stock' => 'nullable|array',
-                'variation_stock.*' => 'nullable|integer|min:0',
+                'variation_stock.*' => 'nullable|integer|min:1',
                 'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
                 'images' => 'nullable|array',
                 'images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:5120',
@@ -679,15 +680,18 @@ class ProductController extends Controller
                                 $key = "{$size}_{$color}";
                                 $stockQuantity = isset($variationStock[$key]) ? (int)$variationStock[$key] : 0;
                                 
-                                $variations[] = [
-                                    'product_id' => $product->id,
-                                    'size' => $size,
-                                    'color' => $color,
-                                    'stock_quantity' => $stockQuantity,
-                                    'in_stock' => $stockQuantity > 0,
-                                    'created_at' => now(),
-                                    'updated_at' => now(),
-                                ];
+                                // Only create variation if stock quantity is greater than 0
+                                if ($stockQuantity > 0) {
+                                    $variations[] = [
+                                        'product_id' => $product->id,
+                                        'size' => $size,
+                                        'color' => $color,
+                                        'stock_quantity' => $stockQuantity,
+                                        'in_stock' => true,
+                                        'created_at' => now(),
+                                        'updated_at' => now(),
+                                    ];
+                                }
                             }
                         }
                     }
@@ -809,7 +813,7 @@ class ProductController extends Controller
     /**
      * Remove the specified product
      */
-    public function destroy(Request $request): Response
+    public function destroy(Request $request)
     {
         try {
             $data = $request->validate([

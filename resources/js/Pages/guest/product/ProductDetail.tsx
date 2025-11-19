@@ -18,6 +18,101 @@ export default function ProductDetail() {
     const [selectedSize, setSelectedSize] = useState(null);
     const [selectedColor, setSelectedColor] = useState(null);
 
+    // Get available sizes for selected color
+    const getAvailableSizesForColor = React.useCallback((color) => {
+        if (!product || !product.variations || !Array.isArray(product.variations)) {
+            return product?.sizes || [];
+        }
+        
+        if (!color) {
+            // If no color selected, return all unique sizes from variations or product sizes
+            const sizesFromVariations = [...new Set(product.variations.map(v => v.size).filter(Boolean))];
+            return sizesFromVariations.length > 0 ? sizesFromVariations : (product.sizes || []);
+        }
+        
+        // Filter variations by color and get unique sizes
+        const colorVariations = product.variations.filter(v => v.color === color);
+        const availableSizes = [...new Set(colorVariations.map(v => v.size).filter(Boolean))];
+        
+        // If no sizes found for this color, return all product sizes as fallback
+        return availableSizes.length > 0 ? availableSizes : (product.sizes || []);
+    }, [product]);
+
+    // Get available sizes based on selected color
+    const availableSizes = React.useMemo(() => {
+        return getAvailableSizesForColor(selectedColor);
+    }, [selectedColor, getAvailableSizesForColor]);
+
+    // Check stock availability for selected variation
+    const checkStockAvailability = React.useCallback(() => {
+        if (!product) return false;
+        
+        // If product has variations, check specific variation stock
+        if (product.variations && Array.isArray(product.variations) && product.variations.length > 0) {
+            if (selectedSize && selectedColor) {
+                // Check specific size-color combination
+                const variation = product.variations.find(
+                    v => v.size === selectedSize && v.color === selectedColor
+                );
+                if (variation) {
+                    return variation.stock_quantity > 0 && variation.in_stock;
+                }
+                return false;
+            } else if (selectedColor) {
+                // Check if any size for this color has stock
+                const colorVariations = product.variations.filter(v => v.color === selectedColor);
+                return colorVariations.some(v => v.stock_quantity > 0 && v.in_stock);
+            } else if (selectedSize) {
+                // Check if any color for this size has stock
+                const sizeVariations = product.variations.filter(v => v.size === selectedSize);
+                return sizeVariations.some(v => v.stock_quantity > 0 && v.in_stock);
+            } else {
+                // Check if any variation has stock
+                return product.variations.some(v => v.stock_quantity > 0 && v.in_stock);
+            }
+        }
+        
+        // For products without variations, check general stock
+        return product.stock_quantity > 0 && product.in_stock;
+    }, [product, selectedSize, selectedColor]);
+
+    // Get stock quantity for selected variation
+    const getStockQuantity = React.useCallback(() => {
+        if (!product) return 0;
+        
+        // If product has variations, get specific variation stock
+        if (product.variations && Array.isArray(product.variations) && product.variations.length > 0) {
+            if (selectedSize && selectedColor) {
+                const variation = product.variations.find(
+                    v => v.size === selectedSize && v.color === selectedColor
+                );
+                return variation ? variation.stock_quantity : 0;
+            }
+        }
+        
+        // For products without variations, return general stock
+        return product.stock_quantity || 0;
+    }, [product, selectedSize, selectedColor]);
+
+    const isInStock = React.useMemo(() => checkStockAvailability(), [checkStockAvailability]);
+    const stockQuantity = React.useMemo(() => getStockQuantity(), [getStockQuantity]);
+
+    // Reset selected size if it's not available for the selected color
+    useEffect(() => {
+        if (selectedSize && selectedColor && !availableSizes.includes(selectedSize)) {
+            setSelectedSize(null);
+        }
+    }, [selectedColor, availableSizes, selectedSize]);
+
+    // Reset quantity if it exceeds available stock when stock changes
+    useEffect(() => {
+        if (stockQuantity > 0 && quantity > stockQuantity) {
+            setQuantity(stockQuantity);
+        } else if (stockQuantity === 0 && quantity > 0) {
+            setQuantity(1); // Reset to 1 when out of stock (will be disabled anyway)
+        }
+    }, [stockQuantity]);
+
     // Remove token from URL immediately - use localStorage/cookies only
     useEffect(() => {
         try {
@@ -429,14 +524,19 @@ export default function ProductDetail() {
                             </div>
 
 
-                            {/* Size Selection */}
-                            {product.sizes && Array.isArray(product.sizes) && product.sizes.length > 0 && (
+                            {/* Size Selection - Show only sizes available for selected color */}
+                            {availableSizes && Array.isArray(availableSizes) && availableSizes.length > 0 && (
                                 <div className="mb-4">
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
                                         Size {selectedSize ? `: ${selectedSize}` : ''}
+                                        {selectedColor && (
+                                            <span className="text-xs text-gray-500 ml-2">
+                                                (Available for {selectedColor})
+                                            </span>
+                                        )}
                                     </label>
                                     <div className="flex flex-wrap gap-2">
-                                        {product.sizes.map((size) => (
+                                        {availableSizes.map((size) => (
                                             <button
                                                 key={size}
                                                 type="button"
@@ -451,6 +551,11 @@ export default function ProductDetail() {
                                             </button>
                                         ))}
                                     </div>
+                                    {selectedColor && availableSizes.length === 0 && (
+                                        <p className="text-sm text-gray-500 mt-2">
+                                            No sizes available for {selectedColor}
+                                        </p>
+                                    )}
                                 </div>
                             )}
 
@@ -461,49 +566,80 @@ export default function ProductDetail() {
                                         Color {selectedColor ? `: ${selectedColor}` : ''}
                                     </label>
                                     <div className="flex flex-wrap gap-2">
-                                        {product.colors.map((color) => (
-                                            <button
-                                                key={color}
-                                                type="button"
-                                                onClick={() => setSelectedColor(color)}
-                                                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                                                    selectedColor === color
-                                                        ? 'bg-indigo-600 text-white hover:bg-indigo-700'
-                                                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                                }`}
-                                            >
-                                                {color}
-                                            </button>
-                                        ))}
+                                        {product.colors.map((color) => {
+                                            const sizesForColor = getAvailableSizesForColor(color);
+                                            return (
+                                                <button
+                                                    key={color}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setSelectedColor(color);
+                                                        // Reset size when color changes
+                                                        setSelectedSize(null);
+                                                    }}
+                                                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                                                        selectedColor === color
+                                                            ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+                                                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                                    }`}
+                                                    title={sizesForColor.length > 0 ? `Available sizes: ${sizesForColor.join(', ')}` : 'No sizes available'}
+                                                >
+                                                    {color}
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             )}
 
                             <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Quantity
+                                    {stockQuantity > 0 && (
+                                        <span className="text-xs text-gray-500 ml-2">
+                                            (Max: {stockQuantity})
+                                        </span>
+                                    )}
+                                </label>
                                 <div className="flex items-center gap-2">
                                     <button
                                         type="button"
                                         onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                                        className="px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-700 hover:bg-gray-50"
+                                        disabled={quantity <= 1 || !isInStock}
+                                        className="px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         -
                                     </button>
                                     <input
                                         type="number"
                                         min="1"
+                                        max={stockQuantity > 0 ? stockQuantity : undefined}
                                         value={quantity}
-                                        onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                                        className="w-20 px-3 py-2 border border-gray-300 rounded-md text-center"
+                                        onChange={(e) => {
+                                            const newQty = parseInt(e.target.value) || 1;
+                                            const maxQty = stockQuantity > 0 ? stockQuantity : 9999;
+                                            setQuantity(Math.max(1, Math.min(newQty, maxQty)));
+                                        }}
+                                        disabled={!isInStock}
+                                        className="w-20 px-3 py-2 border border-gray-300 rounded-md text-center disabled:opacity-50 disabled:cursor-not-allowed"
                                     />
                                     <button
                                         type="button"
-                                        onClick={() => setQuantity(quantity + 1)}
-                                        className="px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-700 hover:bg-gray-50"
+                                        onClick={() => {
+                                            const maxQty = stockQuantity > 0 ? stockQuantity : 9999;
+                                            setQuantity(Math.min(maxQty, quantity + 1));
+                                        }}
+                                        disabled={!isInStock || (stockQuantity > 0 && quantity >= stockQuantity)}
+                                        className="px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         +
                                     </button>
                                 </div>
+                                {stockQuantity > 0 && quantity > stockQuantity && (
+                                    <p className="text-sm text-red-600 mt-1">
+                                        Maximum available quantity is {stockQuantity}
+                                    </p>
+                                )}
                             </div>
 
                             {cartMessage && (
@@ -512,25 +648,48 @@ export default function ProductDetail() {
                                 </div>
                             )}
 
+                            {/* Stock Status - Only show when out of stock */}
+                            {stockQuantity === 0 && (
+                                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                                    <p className="text-sm text-red-800 font-semibold">
+                                        Out of Stock
+                                    </p>
+                                </div>
+                            )}
+
                             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                                 <Button 
                                     className="flex-1 sm:flex-none"
                                     onClick={handleAddToCart}
-                                    disabled={addingToCart || !product.in_stock || (product.sizes && product.sizes.length > 0 && !selectedSize)}
+                                    disabled={addingToCart || !isInStock || (availableSizes && availableSizes.length > 0 && !selectedSize)}
                                 >
-                                    {addingToCart ? 'Adding...' : 'Add to Cart'}
+                                    {addingToCart ? 'Adding...' : isInStock ? 'Add to Cart' : 'Out of Stock'}
                                 </Button>
                                 <Button 
                                     variant="outline"
                                     className="flex-1 sm:flex-none"
                                     onClick={handleBuyNow}
-                                    disabled={addingToCart || !product.in_stock || (product.sizes && product.sizes.length > 0 && !selectedSize)}
+                                    disabled={addingToCart || !isInStock || (availableSizes && availableSizes.length > 0 && !selectedSize)}
                                 >
-                                    {addingToCart ? 'Adding...' : 'Buy Now'}
+                                    {addingToCart ? 'Adding...' : isInStock ? 'Buy Now' : 'Out of Stock'}
                                 </Button>
                             </div>
-                            {(product.sizes && product.sizes.length > 0 && !selectedSize) && (
+                            {(availableSizes && availableSizes.length > 0 && !selectedSize) && (
                                 <p className="text-sm text-red-600 mt-2">Please select a size</p>
+                            )}
+                            {selectedColor && availableSizes.length === 0 && (
+                                <p className="text-sm text-orange-600 mt-2">No sizes available for {selectedColor}. Please select a different color.</p>
+                            )}
+                            {!isInStock && (selectedSize || selectedColor || (!product.variations || product.variations.length === 0)) && (
+                                <p className="text-sm text-red-600 mt-2">
+                                    {selectedSize && selectedColor 
+                                        ? `This ${selectedSize} size in ${selectedColor} color is currently out of stock.`
+                                        : selectedColor
+                                        ? `This ${selectedColor} color is currently out of stock.`
+                                        : selectedSize
+                                        ? `This ${selectedSize} size is currently out of stock.`
+                                        : 'This product is currently out of stock.'}
+                                </p>
                             )}
                         </div>
                     </div>

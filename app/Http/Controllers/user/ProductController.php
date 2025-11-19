@@ -199,7 +199,7 @@ class ProductController extends Controller
                 'id' => 'required|string'
             ]);
 
-            $product = Product::with(['category', 'media', 'discounts'])
+            $product = Product::with(['category', 'media', 'discounts', 'variations'])
                 ->where('is_active', true)
                 ->where('uuid', $data['id'])
                 ->firstOrFail();

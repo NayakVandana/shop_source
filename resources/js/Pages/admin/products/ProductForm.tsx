@@ -24,7 +24,7 @@ export default function ProductForm() {
         price: '',
         sale_price: '',
         category_id: '',
-        stock_quantity: '0',
+        stock_quantity: '1',
         manage_stock: true,
         in_stock: true,
         is_featured: false,
@@ -92,7 +92,7 @@ export default function ProductForm() {
                     price: product.price || '',
                     sale_price: product.sale_price || '',
                     category_id: product.category_id || '',
-                    stock_quantity: product.stock_quantity || '0',
+                    stock_quantity: product.stock_quantity && product.stock_quantity > 0 ? product.stock_quantity : '1',
                     manage_stock: product.manage_stock !== undefined ? product.manage_stock : true,
                     in_stock: product.in_stock !== undefined ? product.in_stock : true,
                     is_featured: product.is_featured || false,
@@ -113,7 +113,7 @@ export default function ProductForm() {
                     
                     product.variations.forEach(variation => {
                         const key = `${variation.size}_${variation.color}`;
-                        stockData[key] = variation.stock_quantity || 0;
+                        stockData[key] = variation.stock_quantity && variation.stock_quantity > 0 ? variation.stock_quantity : 1;
                         
                         // Group sizes by color
                         if (variation.color) {
@@ -423,9 +423,12 @@ export default function ProductForm() {
     
     const handleStockChange = (size, color, value) => {
         const key = `${size}_${color}`;
+        const stockValue = parseInt(value) || 0;
+        // Only allow stock >= 1, if 0 or less, set to 1
+        const validStock = stockValue < 1 ? 1 : stockValue;
         const newStock = {
             ...variationStock,
-            [key]: parseInt(value) || 0
+            [key]: validStock
         };
         setVariationStock(newStock);
         
@@ -446,10 +449,13 @@ export default function ProductForm() {
     const handleSetDefaultStock = (color, defaultStock) => {
         const sizes = colorSizes[color] || [];
         const newStock = { ...variationStock };
+        const stockValue = parseInt(defaultStock) || 0;
+        // Only allow stock >= 1, if 0 or less, set to 1
+        const validStock = stockValue < 1 ? 1 : stockValue;
         
         sizes.forEach(size => {
             const key = `${size}_${color}`;
-            newStock[key] = parseInt(defaultStock) || 0;
+            newStock[key] = validStock;
         });
         
         setVariationStock(newStock);
@@ -739,8 +745,8 @@ export default function ProductForm() {
             validationErrors.stock_quantity = 'Stock quantity is required.';
         } else {
             const stockQty = parseInt(formData.stock_quantity);
-            if (isNaN(stockQty) || stockQty < 0) {
-                validationErrors.stock_quantity = 'Stock quantity must be a valid number (0 or greater).';
+            if (isNaN(stockQty) || stockQty < 1) {
+                validationErrors.stock_quantity = 'Stock quantity must be a valid number greater than 0 (minimum 1).';
             }
         }
         
@@ -1049,7 +1055,7 @@ export default function ProductForm() {
                                             name="stock_quantity"
                                             value={formData.stock_quantity}
                                             onChange={handleInputChange}
-                                            min="0"
+                                            min="1"
                                             title="Stock Quantity *"
                                             error={errors.stock_quantity}
                                         />
@@ -1190,7 +1196,7 @@ export default function ProductForm() {
                                                                                 <div className="flex items-center gap-2">
                                                                                     <input
                                                                                         type="number"
-                                                                                        min="0"
+                                                                                        min="1"
                                                                                         placeholder="Default"
                                                                                         className="w-20 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-primary-500"
                                                                                         onKeyDown={(e) => {
@@ -1227,11 +1233,11 @@ export default function ProductForm() {
                                                                                             </label>
                                                                                             <FormInput
                                                                                                 type="number"
-                                                                                                min="0"
+                                                                                                min="1"
                                                                                                 value={stockValue}
                                                                                                 onChange={(e) => handleStockChange(size, color, e.target.value)}
                                                                                                 className="w-full"
-                                                                                                placeholder="0"
+                                                                                                placeholder="1"
                                                                                                 title={`Stock for ${size} - ${color}`}
                                                                                             />
                                                                                         </div>
