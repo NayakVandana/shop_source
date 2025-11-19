@@ -12,6 +12,8 @@ export default function Products() {
 	const [products, setProducts] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
+	const [searchTerm, setSearchTerm] = useState('');
+	const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
 
 	// Remove token from URL immediately - use localStorage/cookies only
 	useEffect(() => {
@@ -30,9 +32,27 @@ export default function Products() {
 		} catch (_) {}
 	}, []);
 
+	// Debounce search term
 	useEffect(() => {
+		const timer = setTimeout(() => {
+			setDebouncedSearchTerm(searchTerm);
+		}, 500); // 500ms delay
+
+		return () => clearTimeout(timer);
+	}, [searchTerm]);
+
+	// Fetch products when debounced search term changes
+	useEffect(() => {
+		setLoading(true);
+		setError(null);
+		
+		const requestData = {};
+		if (debouncedSearchTerm.trim()) {
+			requestData.search = debouncedSearchTerm.trim();
+		}
+
 		axios
-			.post('/api/user/products/list', {})
+			.post('/api/user/products/list', requestData)
 			.then((response) => {
 				if (response.data && (response.data.success || response.data.status)) {
 					const data = response.data.data || [];
@@ -46,7 +66,7 @@ export default function Products() {
 				setError('Failed to load products');
 				setLoading(false);
 			});
-	}, []);
+	}, [debouncedSearchTerm]);
 
 	const renderContent = () => {
 		if (loading) {
@@ -77,6 +97,42 @@ export default function Products() {
 							<Text className="mt-3 max-w-md mx-auto text-sm sm:text-base md:text-lg lg:text-xl sm:mt-5 md:max-w-3xl" muted>
 								Discover our amazing collection of products
 							</Text>
+						</div>
+
+						{/* Search Bar */}
+						<div className="mb-6 sm:mb-8 max-w-2xl mx-auto">
+							<div className="relative">
+								<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+									<svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+										<path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+									</svg>
+								</div>
+								<input
+									type="text"
+									placeholder="Search products by name, description, or SKU..."
+									value={searchTerm}
+									onChange={(e) => setSearchTerm(e.target.value)}
+									className="block w-full pl-10 pr-3 py-3 sm:py-4 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm sm:text-base"
+								/>
+								{searchTerm && (
+									<button
+										onClick={() => setSearchTerm('')}
+										className="absolute inset-y-0 right-0 pr-3 flex items-center"
+									>
+										<svg className="h-5 w-5 text-gray-400 hover:text-gray-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+											<path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+										</svg>
+									</button>
+								)}
+							</div>
+							{debouncedSearchTerm && (
+								<div className="mt-2 text-sm text-gray-600 text-center">
+									Searching for: <span className="font-semibold">"{debouncedSearchTerm}"</span>
+									{products.length > 0 && (
+										<span className="ml-2">({products.length} {products.length === 1 ? 'result' : 'results'})</span>
+									)}
+								</div>
+							)}
 						</div>
 
 						<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 md:gap-6 lg:grid-cols-3 xl:grid-cols-4">
@@ -135,9 +191,13 @@ export default function Products() {
 							))}
 						</div>
 
-						{products.length === 0 && (
+						{products.length === 0 && !loading && (
 							<div className="text-center py-8 sm:py-12">
-								<Text className="text-base sm:text-lg" muted>No products available at the moment.</Text>
+								<Text className="text-base sm:text-lg" muted>
+									{debouncedSearchTerm 
+										? `No products found matching "${debouncedSearchTerm}". Try a different search term.`
+										: 'No products available at the moment.'}
+								</Text>
 							</div>
 						)}
 					</div>

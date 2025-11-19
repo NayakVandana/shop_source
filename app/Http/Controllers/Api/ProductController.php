@@ -137,7 +137,12 @@ class ProductController extends Controller
             
             // Search functionality
             if ($request->has('search')) {
-                $query->where('name', 'like', '%' . $request->search . '%');
+                $search = $request->get('search');
+                $query->where(function($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('description', 'like', "%{$search}%")
+                      ->orWhere('sku', 'like', "%{$search}%");
+                });
             }
             
             // Category filter
