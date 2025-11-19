@@ -11,36 +11,36 @@ use Inertia\Inertia;
 
 // Home & Public Pages (Guest)
 Route::get('/', function () {
-    return Inertia::render('guest/home/Home');
+    return Inertia::render('ui/home/Home');
 })->name('home');
 
 Route::get('/products', function () {
-    return Inertia::render('guest/product/Products');
+    return Inertia::render('ui/product/Products');
 })->name('products');
 
 Route::get('/product', function () {
-    return Inertia::render('guest/product/ProductDetail');
+    return Inertia::render('ui/product/ProductDetail');
 })->name('product');
 
 Route::get('/cart', function () {
-    return Inertia::render('guest/cart/Cart');
+    return Inertia::render('ui/cart/Cart');
 })->name('cart');
 
 Route::get('/checkout', function () {
-    return Inertia::render('guest/checkout/Checkout');
+    return Inertia::render('ui/checkout/Checkout');
 })->name('checkout');
 
 Route::get('/order-confirmation', function () {
-    return Inertia::render('guest/checkout/OrderConfirmation');
+    return Inertia::render('ui/checkout/OrderConfirmation');
 })->name('order-confirmation');
 
 // Authentication Pages (Guest)
 Route::get('/login', function () {
-    return Inertia::render('guest/auth/Login');
+    return Inertia::render('ui/auth/Login');
 })->name('login');
 
 Route::get('/register', function () {
-    return Inertia::render('guest/auth/Register');
+    return Inertia::render('ui/auth/Register');
 })->name('register');
 
 // User Products - Redirect to products page
