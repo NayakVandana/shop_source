@@ -7,9 +7,11 @@ use App\Models\Product;
 use App\Models\Category;
 use App\Models\Discount;
 use App\Models\RecentlyViewedProduct;
+use App\Models\UserToken;
 use Illuminate\Http\Request;
 use Exception;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class ProductController extends Controller
 {
@@ -224,20 +226,48 @@ class ProductController extends Controller
                 'product_id' => 'required|string'
             ]);
 
+            // Manually authenticate user if token is present (since route is public)
             $user = $request->user();
+            if (!$user) {
+                $token = $request->bearerToken() ?? $request->get('Authorization');
+                if ($token) {
+                    // Remove 'Bearer ' prefix if present
+                    $token = str_replace('Bearer ', '', $token);
+                    
+                    $userToken = UserToken::where(function ($q) use ($token) {
+                        $q->where('web_access_token', $token);
+                        $q->orWhere('app_access_token', $token);
+                    })->first();
+                    
+                    if ($userToken && $userToken->user) {
+                        $user = $userToken->user;
+                        Auth::login($user);
+                    }
+                }
+            }
+            
+            // Get session ID for guest users - same approach as CartController
+            // Prioritize cookie over session for better persistence
             $sessionId = null;
             
-            // Get session ID for guest users
             if (!$user) {
-                try {
-                    if ($request->hasSession()) {
-                        $sessionId = $request->session()->getId();
-                    }
-                } catch (\Exception $e) {
-                    // Session not available
-                }
+                // First, try to get from cookie (most reliable for guest persistence)
+                $sessionId = $request->cookie('cart_session_id');
+                
+                // If no cookie, try session
                 if (!$sessionId) {
-                    $sessionId = $request->cookie('cart_session_id');
+                    try {
+                        if ($request->hasSession()) {
+                            $sessionId = $request->session()->getId();
+                        }
+                    } catch (\Exception $e) {
+                        // Session not available
+                    }
+                }
+                
+                // If still no session ID, generate a new one for guest
+                if (!$sessionId) {
+                    $sessionId = 'guest_' . uniqid() . '_' . time();
                 }
             }
 
@@ -247,17 +277,41 @@ class ProductController extends Controller
                 return $this->sendJsonResponse(false, 'Product not found', null, 404);
             }
 
-            // Use updateOrCreate to handle duplicates
-            $recentlyViewed = RecentlyViewedProduct::updateOrCreate(
-                [
-                    'user_id' => $user ? $user->id : null,
-                    'session_id' => $sessionId,
-                    'product_id' => $product->id,
-                ],
-                [
-                    'viewed_at' => now(),
-                ]
-            );
+            // Use updateOrCreate to handle duplicates with proper transaction
+            // Match unique constraints: ['user_id', 'product_id'] for authenticated users
+            // or ['session_id', 'product_id'] for guest users
+            $recentlyViewed = DB::transaction(function () use ($user, $sessionId, $product) {
+                if ($user) {
+                    // For authenticated users, match on user_id and product_id
+                    // Delete any existing records first to prevent duplicates (due to unique constraint)
+                    RecentlyViewedProduct::where('user_id', $user->id)
+                        ->where('product_id', $product->id)
+                        ->delete();
+                    
+                    // Create new record
+                    return RecentlyViewedProduct::create([
+                        'user_id' => $user->id,
+                        'session_id' => null,
+                        'product_id' => $product->id,
+                        'viewed_at' => now(),
+                    ]);
+                } else {
+                    // For guest users, match on session_id and product_id
+                    // Delete any existing records first to prevent duplicates (due to unique constraint)
+                    RecentlyViewedProduct::where('session_id', $sessionId)
+                        ->where('product_id', $product->id)
+                        ->whereNull('user_id')
+                        ->delete();
+                    
+                    // Create new record
+                    return RecentlyViewedProduct::create([
+                        'user_id' => null,
+                        'session_id' => $sessionId,
+                        'product_id' => $product->id,
+                        'viewed_at' => now(),
+                    ]);
+                }
+            });
 
             // Limit to 20 most recent views per user/session (across all products)
             $query = RecentlyViewedProduct::query();
@@ -278,7 +332,14 @@ class ProductController extends Controller
                 RecentlyViewedProduct::whereIn('id', $oldestViews)->delete();
             }
 
-            return $this->sendJsonResponse(true, 'Product view tracked successfully', $recentlyViewed);
+            $response = $this->sendJsonResponse(true, 'Product view tracked successfully', $recentlyViewed);
+            
+            // Always set/update cookie for guest session to maintain persistence (same as CartController)
+            if (!$user && $sessionId) {
+                $response->cookie('cart_session_id', $sessionId, 60 * 24 * 30, '/', null, false, false); // 30 days, httpOnly false for JS access
+            }
+            
+            return $response;
         } catch (Exception $e) {
             return $this->sendError($e);
         }
@@ -293,17 +354,23 @@ class ProductController extends Controller
             $user = $request->user();
             $sessionId = null;
             
-            // Get session ID for guest users
+            // Get session ID for guest users - same approach as CartController
+            // Prioritize cookie over session for better persistence
+            $sessionId = null;
+            
             if (!$user) {
-                try {
-                    if ($request->hasSession()) {
-                        $sessionId = $request->session()->getId();
-                    }
-                } catch (\Exception $e) {
-                    // Session not available
-                }
+                // First, try to get from cookie (most reliable for guest persistence)
+                $sessionId = $request->cookie('cart_session_id');
+                
+                // If no cookie, try session
                 if (!$sessionId) {
-                    $sessionId = $request->cookie('cart_session_id');
+                    try {
+                        if ($request->hasSession()) {
+                            $sessionId = $request->session()->getId();
+                        }
+                    } catch (\Exception $e) {
+                        // Session not available
+                    }
                 }
             }
 
@@ -351,17 +418,23 @@ class ProductController extends Controller
             $user = $request->user();
             $sessionId = null;
             
-            // Get session ID for guest users
+            // Get session ID for guest users - same approach as CartController
+            // Prioritize cookie over session for better persistence
+            $sessionId = null;
+            
             if (!$user) {
-                try {
-                    if ($request->hasSession()) {
-                        $sessionId = $request->session()->getId();
-                    }
-                } catch (\Exception $e) {
-                    // Session not available
-                }
+                // First, try to get from cookie (most reliable for guest persistence)
+                $sessionId = $request->cookie('cart_session_id');
+                
+                // If no cookie, try session
                 if (!$sessionId) {
-                    $sessionId = $request->cookie('cart_session_id');
+                    try {
+                        if ($request->hasSession()) {
+                            $sessionId = $request->session()->getId();
+                        }
+                    } catch (\Exception $e) {
+                        // Session not available
+                    }
                 }
             }
 
@@ -404,17 +477,23 @@ class ProductController extends Controller
             $user = $request->user();
             $sessionId = null;
             
-            // Get session ID for guest users
+            // Get session ID for guest users - same approach as CartController
+            // Prioritize cookie over session for better persistence
+            $sessionId = null;
+            
             if (!$user) {
-                try {
-                    if ($request->hasSession()) {
-                        $sessionId = $request->session()->getId();
-                    }
-                } catch (\Exception $e) {
-                    // Session not available
-                }
+                // First, try to get from cookie (most reliable for guest persistence)
+                $sessionId = $request->cookie('cart_session_id');
+                
+                // If no cookie, try session
                 if (!$sessionId) {
-                    $sessionId = $request->cookie('cart_session_id');
+                    try {
+                        if ($request->hasSession()) {
+                            $sessionId = $request->session()->getId();
+                        }
+                    } catch (\Exception $e) {
+                        // Session not available
+                    }
                 }
             }
 
