@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link } from '@inertiajs/react';
 import axios from 'axios';
 import Button from './ui/Button';
+import sessionService from '../utils/sessionService';
 
 export default function Navigation({ user }) {
     const [cartCount, setCartCount] = useState(0);
@@ -259,21 +260,20 @@ export default function Navigation({ user }) {
             } catch (_) {}
         } catch (_) {}
 
-        // Clear local/session data but preserve cart_session_id cookie
+        // Clear local/session data but preserve session_id (in both localStorage and cookie)
         try {
+            // Preserve session_id before clearing auth data
+            sessionService.preserveSessionIdOnLogout();
+            
+            // Clear auth tokens but preserve session_id
             localStorage.removeItem('auth_token');
             localStorage.removeItem('admin_token');
             
-            // Preserve cart_session_id cookie to maintain cart after logout
-            const cartSessionId = document.cookie
-                .split(';')
-                .find(c => c.trim().startsWith('cart_session_id='));
-            
-            // Clear all cookies except cart_session_id
+            // Clear all cookies except session_id
             document.cookie.split(';').forEach((c) => {
                 const cookieName = c.split('=')[0].trim();
-                // Don't delete cart_session_id cookie
-                if (cookieName !== 'cart_session_id') {
+                // Don't delete session_id cookie
+                if (cookieName !== 'session_id') {
                     document.cookie = c
                         .replace(/^ +/, '')
                         .replace(/=.*/, `=;expires=${new Date(0).toUTCString()};path=/`);

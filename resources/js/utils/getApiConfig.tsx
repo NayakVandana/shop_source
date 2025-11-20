@@ -1,5 +1,6 @@
 // @ts-nocheck
 import getAuthToken from './getAuthToken';
+import sessionService from './sessionService';
 
 /**
  * Get API configuration for axios requests
@@ -14,6 +15,9 @@ export default function getApiConfig(options = {}) {
     // Get token
     const token = getAuthToken(tokenType, providedToken);
     
+    // Get session ID from session service (localStorage or cookie fallback)
+    const sessionId = sessionService.getSessionIdForRequest();
+    
     // Build headers
     const headers = { 'Content-Type': 'application/json' };
     
@@ -23,6 +27,11 @@ export default function getApiConfig(options = {}) {
         } else {
             headers['Authorization'] = `Bearer ${token}`;
         }
+    }
+    
+    // Add session ID header (from localStorage) for backend to use
+    if (sessionId) {
+        headers['X-Session-ID'] = sessionId;
     }
     
     // Build config

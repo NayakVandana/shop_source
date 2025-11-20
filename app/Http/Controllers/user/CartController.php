@@ -8,6 +8,7 @@ use App\Models\CartItem;
 use App\Models\Product;
 use App\Models\ProductVariation;
 use App\Models\Discount;
+use App\Helpers\SessionService;
 use Illuminate\Http\Request;
 use Exception;
 use Illuminate\Support\Facades\Validator;
@@ -136,28 +137,8 @@ class CartController extends Controller
     {
         $user = $request->user();
         
-        // For guest users, prioritize cookie over session for better persistence
-        // For authenticated users, we can use session or cookie
-        $sessionId = null;
-        
-        // First, try to get from cookie (most reliable for guest persistence)
-        $sessionId = $request->cookie('cart_session_id');
-        
-        // If no cookie, try session
-        if (!$sessionId) {
-            try {
-                if ($request->hasSession()) {
-                    $sessionId = $request->session()->getId();
-                }
-            } catch (\Exception $e) {
-                // Session not available
-            }
-        }
-        
-        // If still no session ID, generate a new one for guest
-        if (!$sessionId) {
-            $sessionId = 'guest_' . uniqid() . '_' . time();
-        }
+        // Get or create session ID using centralized SessionService
+        $sessionId = SessionService::getOrCreateSessionId($request);
 
         if ($user) {
             // Get or create cart for authenticated user
@@ -224,15 +205,14 @@ class CartController extends Controller
         try {
             $cart = $this->getOrCreateCart($request);
             $cartData = $this->formatCartResponse($cart);
+            
+            // Add session_id to response data (for mobile apps)
+            $cartData['session_id'] = $cart->session_id;
 
             $response = $this->sendJsonResponse(true, 'Cart retrieved successfully', $cartData);
 
-            // Always set/update cookie for guest session to maintain cart persistence
-            if (!$request->user() && $cart->session_id) {
-                $response->cookie('cart_session_id', $cart->session_id, 60 * 24 * 30, '/', null, false, false); // 30 days, httpOnly false for JS access
-            }
-
-            return $response;
+            // Always set/update session cookie to maintain cart persistence (for web browsers)
+            return SessionService::setSessionCookie($response, $cart->session_id);
         } catch (Exception $e) {
             return $this->sendError($e);
         }
@@ -365,12 +345,8 @@ class CartController extends Controller
 
             $response = $this->sendJsonResponse(true, 'Item added to cart successfully', $cartData);
 
-            // Always set/update cookie for guest session to maintain cart persistence
-            if (!$request->user() && $cart->session_id) {
-                $response->cookie('cart_session_id', $cart->session_id, 60 * 24 * 30, '/', null, false, false); // 30 days
-            }
-
-            return $response;
+            // Always set/update session cookie to maintain cart persistence
+            return SessionService::setSessionCookie($response, $cart->session_id);
         } catch (Exception $e) {
             return $this->sendError($e);
         }
@@ -400,7 +376,7 @@ class CartController extends Controller
             $sessionId = null;
             
             // First, try to get from cookie (most reliable for guest persistence)
-            $sessionId = $request->cookie('cart_session_id');
+            $sessionId = SessionService::getSessionId($request);
             
             // If no cookie, try session
             if (!$sessionId) {
@@ -479,12 +455,8 @@ class CartController extends Controller
 
             $response = $this->sendJsonResponse(true, 'Cart item updated successfully', $cartData);
 
-            // Always set/update cookie for guest session to maintain cart persistence
-            if (!$request->user() && $cart->session_id) {
-                $response->cookie('cart_session_id', $cart->session_id, 60 * 24 * 30, '/', null, false, false); // 30 days
-            }
-
-            return $response;
+            // Always set/update session cookie to maintain cart persistence
+            return SessionService::setSessionCookie($response, $cart->session_id);
         } catch (Exception $e) {
             return $this->sendError($e);
         }
@@ -513,7 +485,7 @@ class CartController extends Controller
             $sessionId = null;
             
             // First, try to get from cookie (most reliable for guest persistence)
-            $sessionId = $request->cookie('cart_session_id');
+            $sessionId = SessionService::getSessionId($request);
             
             // If no cookie, try session
             if (!$sessionId) {
@@ -551,12 +523,8 @@ class CartController extends Controller
 
             $response = $this->sendJsonResponse(true, 'Item removed from cart successfully', $cartData);
 
-            // Always set/update cookie for guest session to maintain cart persistence
-            if (!$request->user() && $cart->session_id) {
-                $response->cookie('cart_session_id', $cart->session_id, 60 * 24 * 30, '/', null, false, false); // 30 days
-            }
-
-            return $response;
+            // Always set/update session cookie to maintain cart persistence
+            return SessionService::setSessionCookie($response, $cart->session_id);
         } catch (Exception $e) {
             return $this->sendError($e);
         }
@@ -577,12 +545,8 @@ class CartController extends Controller
 
             $response = $this->sendJsonResponse(true, 'Cart cleared successfully', $cartData);
 
-            // Always set/update cookie for guest session to maintain cart persistence
-            if (!$request->user() && $cart->session_id) {
-                $response->cookie('cart_session_id', $cart->session_id, 60 * 24 * 30, '/', null, false, false); // 30 days
-            }
-
-            return $response;
+            // Always set/update session cookie to maintain cart persistence
+            return SessionService::setSessionCookie($response, $cart->session_id);
         } catch (Exception $e) {
             return $this->sendError($e);
         }

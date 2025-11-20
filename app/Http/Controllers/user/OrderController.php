@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\CouponCode;
 use App\Models\ProductVariation;
+use App\Helpers\SessionService;
 use Illuminate\Http\Request;
 use Exception;
 use Illuminate\Support\Facades\Validator;
@@ -21,17 +22,7 @@ class OrderController extends Controller
     protected function getOrCreateCart(Request $request): Cart
     {
         $user = $request->user();
-        $sessionId = null;
-        try {
-            if ($request->hasSession()) {
-                $sessionId = $request->session()->getId();
-            }
-        } catch (\Exception $e) {
-            // Session not available
-        }
-        if (!$sessionId) {
-            $sessionId = $request->cookie('cart_session_id');
-        }
+        $sessionId = SessionService::getOrCreateSessionId($request);
 
         if ($user) {
             $cart = Cart::where('user_id', $user->id)->first();
@@ -150,7 +141,7 @@ class OrderController extends Controller
                     // Session not available
                 }
                 if (!$sessionId) {
-                    $sessionId = $request->cookie('cart_session_id');
+                    $sessionId = SessionService::getSessionId($request);
                 }
                 if (!$sessionId) {
                     $sessionId = 'guest_' . uniqid() . '_' . time();
@@ -260,7 +251,7 @@ class OrderController extends Controller
                 // Session not available
             }
             if (!$sessionId) {
-                $sessionId = $request->cookie('cart_session_id');
+                $sessionId = SessionService::getSessionId($request);
             }
 
             $query = Order::with(['items.product.media']);
@@ -315,7 +306,7 @@ class OrderController extends Controller
                 // Session not available
             }
             if (!$sessionId) {
-                $sessionId = $request->cookie('cart_session_id');
+                $sessionId = SessionService::getSessionId($request);
             }
 
             $order = Order::with(['items.product.media', 'user'])

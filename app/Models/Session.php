@@ -1,0 +1,27 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class Session extends Model
+{
+    protected $fillable = [
+        'session_id',
+        'user_id',
+        'device_type',
+        'user_agent',
+        'ip_address',
+        'last_activity',
+    ];
+
+    protected $casts = [
+        'last_activity' => 'datetime',
+    ];
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+}

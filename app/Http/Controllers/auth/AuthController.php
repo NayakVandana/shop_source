@@ -5,6 +5,7 @@ namespace App\Http\Controllers\auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\UserToken;
+use App\Helpers\SessionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -94,13 +95,10 @@ class AuthController extends Controller
 
             // Merge guest cart with user cart after login
             try {
-                $sessionId = null;
-                if ($request->hasSession()) {
-                    $sessionId = $request->session()->getId();
-                }
-                if (!$sessionId) {
-                    $sessionId = $request->cookie('cart_session_id');
-                }
+                $sessionId = SessionService::getOrCreateSessionId($request);
+
+                // Associate session with user (convert guest session to user session)
+                SessionService::associateSessionWithUser($sessionId, $user, $request);
 
                 if ($sessionId) {
                     $userCart = \App\Models\Cart::firstOrCreate(
@@ -142,8 +140,21 @@ class AuthController extends Controller
             // Placeholder: Dispatch UserLoggedin event
             // UserLoggedin::dispatch($user);
 
+            // Get session ID for response
+            $sessionId = SessionService::getOrCreateSessionId($request);
+            
+            // Add session_id to user data (for mobile apps and frontend sync)
+            $userData = $user->toArray();
+            if (!isset($userData['session_id'])) {
+                $userData['session_id'] = $sessionId;
+            }
+            
             // Set auth_token cookie for persistent authentication
-            $response = $this->sendJsonResponse(true, 'Login Successfully', $user, 200);
+            $response = $this->sendJsonResponse(true, 'Login Successfully', $userData, 200);
+            
+            // Set session cookie (for web browsers)
+            $response = SessionService::setSessionCookie($response, $sessionId);
+            
             if ($user->access_token) {
                 // Set cookie with proper configuration for Inertia requests
                 // httpOnly: false allows JS access
@@ -220,18 +231,7 @@ class AuthController extends Controller
             $user = $request->user();
 
             // Get session ID for cart preservation (before logout)
-            $sessionId = null;
-            if ($request->hasSession()) {
-                try {
-                    $sessionId = $request->session()->getId();
-                } catch (\Throwable $e) {}
-            }
-            if (!$sessionId) {
-                $sessionId = $request->cookie('cart_session_id');
-            }
-            if (!$sessionId) {
-                $sessionId = 'guest_' . uniqid() . '_' . time();
-            }
+            $sessionId = SessionService::getOrCreateSessionId($request);
 
             // Convert user cart to guest cart before logout to preserve cart items
             if ($user) {
@@ -272,6 +272,9 @@ class AuthController extends Controller
                             ]);
                         }
                     }
+                    
+                    // Disassociate session from user (convert user session to guest session)
+                    SessionService::disassociateSessionFromUser($sessionId);
                 } catch (\Exception $e) {
                     // Log error but don't fail logout
                     \Log::error('Error converting cart on logout: ' . $e->getMessage());
@@ -293,18 +296,14 @@ class AuthController extends Controller
             try { $request->session()->regenerateToken(); } catch (\Throwable $e) {}
 
             // Also explicitly forget possible cookies used by our app and the session cookie
-            // But preserve cart_session_id cookie
+            // But preserve session_id cookie
             $response = $this->sendJsonResponse(true, 'Logged out successfully', null, 200);
             $response->headers->clearCookie(config('session.cookie'));
             $response->headers->clearCookie('auth_token');
             $response->headers->clearCookie('admin_token');
             
-            // Set cart_session_id cookie to preserve cart
-            if ($sessionId) {
-                $response->cookie('cart_session_id', $sessionId, 60 * 24 * 30, '/', null, false, false);
-            }
-
-            return $response;
+            // Set session_id cookie to preserve cart
+            return SessionService::setSessionCookie($response, $sessionId);
         } catch (Exception $e) {
             return $this->sendError($e);
         }

@@ -81,6 +81,14 @@ class User extends Authenticatable
         return $this->hasMany(RecentlyViewedProduct::class)->orderBy('viewed_at', 'desc');
     }
 
+    /**
+     * Get user sessions relationship
+     */
+    public function sessions(): HasMany
+    {
+        return $this->hasMany(Session::class);
+    }
+
 
     public function getRouteKeyName()
     {

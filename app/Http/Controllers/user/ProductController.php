@@ -8,6 +8,7 @@ use App\Models\Category;
 use App\Models\Discount;
 use App\Models\RecentlyViewedProduct;
 use App\Models\UserToken;
+use App\Helpers\SessionService;
 use Illuminate\Http\Request;
 use Exception;
 use Illuminate\Support\Facades\DB;
@@ -246,30 +247,8 @@ class ProductController extends Controller
                 }
             }
             
-            // Get session ID for guest users - same approach as CartController
-            // Prioritize cookie over session for better persistence
-            $sessionId = null;
-            
-            if (!$user) {
-                // First, try to get from cookie (most reliable for guest persistence)
-                $sessionId = $request->cookie('cart_session_id');
-                
-                // If no cookie, try session
-                if (!$sessionId) {
-                    try {
-                        if ($request->hasSession()) {
-                            $sessionId = $request->session()->getId();
-                        }
-                    } catch (\Exception $e) {
-                        // Session not available
-                    }
-                }
-                
-                // If still no session ID, generate a new one for guest
-                if (!$sessionId) {
-                    $sessionId = 'guest_' . uniqid() . '_' . time();
-                }
-            }
+            // Get or create session ID using centralized SessionService
+            $sessionId = SessionService::getOrCreateSessionId($request);
 
             // Find product by UUID
             $product = Product::where('uuid', $data['product_id'])->first();
@@ -277,39 +256,34 @@ class ProductController extends Controller
                 return $this->sendJsonResponse(false, 'Product not found', null, 404);
             }
 
-            // Use updateOrCreate to handle duplicates with proper transaction
+            // Use updateOrCreate to handle duplicates - updates existing or creates new
             // Match unique constraints: ['user_id', 'product_id'] for authenticated users
             // or ['session_id', 'product_id'] for guest users
             $recentlyViewed = DB::transaction(function () use ($user, $sessionId, $product) {
                 if ($user) {
                     // For authenticated users, match on user_id and product_id
-                    // Delete any existing records first to prevent duplicates (due to unique constraint)
-                    RecentlyViewedProduct::where('user_id', $user->id)
-                        ->where('product_id', $product->id)
-                        ->delete();
-                    
-                    // Create new record
-                    return RecentlyViewedProduct::create([
-                        'user_id' => $user->id,
-                        'session_id' => null,
-                        'product_id' => $product->id,
-                        'viewed_at' => now(),
-                    ]);
+                    return RecentlyViewedProduct::updateOrCreate(
+                        [
+                            'user_id' => $user->id,
+                            'product_id' => $product->id,
+                        ],
+                        [
+                            'session_id' => null,
+                            'viewed_at' => now(),
+                        ]
+                    );
                 } else {
                     // For guest users, match on session_id and product_id
-                    // Delete any existing records first to prevent duplicates (due to unique constraint)
-                    RecentlyViewedProduct::where('session_id', $sessionId)
-                        ->where('product_id', $product->id)
-                        ->whereNull('user_id')
-                        ->delete();
-                    
-                    // Create new record
-                    return RecentlyViewedProduct::create([
-                        'user_id' => null,
-                        'session_id' => $sessionId,
-                        'product_id' => $product->id,
-                        'viewed_at' => now(),
-                    ]);
+                    return RecentlyViewedProduct::updateOrCreate(
+                        [
+                            'session_id' => $sessionId,
+                            'product_id' => $product->id,
+                        ],
+                        [
+                            'user_id' => null,
+                            'viewed_at' => now(),
+                        ]
+                    );
                 }
             });
 
@@ -332,14 +306,14 @@ class ProductController extends Controller
                 RecentlyViewedProduct::whereIn('id', $oldestViews)->delete();
             }
 
-            $response = $this->sendJsonResponse(true, 'Product view tracked successfully', $recentlyViewed);
+            // Add session_id to response data (for mobile apps)
+            $responseData = $recentlyViewed->toArray();
+            $responseData['session_id'] = $sessionId;
             
-            // Always set/update cookie for guest session to maintain persistence (same as CartController)
-            if (!$user && $sessionId) {
-                $response->cookie('cart_session_id', $sessionId, 60 * 24 * 30, '/', null, false, false); // 30 days, httpOnly false for JS access
-            }
+            $response = $this->sendJsonResponse(true, 'Product view tracked successfully', $responseData);
             
-            return $response;
+            // Always set/update session cookie to maintain persistence (for web browsers)
+            return SessionService::setSessionCookie($response, $sessionId);
         } catch (Exception $e) {
             return $this->sendError($e);
         }
@@ -352,27 +326,9 @@ class ProductController extends Controller
     {
         try {
             $user = $request->user();
-            $sessionId = null;
             
-            // Get session ID for guest users - same approach as CartController
-            // Prioritize cookie over session for better persistence
-            $sessionId = null;
-            
-            if (!$user) {
-                // First, try to get from cookie (most reliable for guest persistence)
-                $sessionId = $request->cookie('cart_session_id');
-                
-                // If no cookie, try session
-                if (!$sessionId) {
-                    try {
-                        if ($request->hasSession()) {
-                            $sessionId = $request->session()->getId();
-                        }
-                    } catch (\Exception $e) {
-                        // Session not available
-                    }
-                }
-            }
+            // Get session ID using centralized SessionService
+            $sessionId = SessionService::getSessionId($request);
 
             $query = RecentlyViewedProduct::with(['product.category', 'product.media', 'product.discounts'])
                 ->whereHas('product', function($q) {
@@ -416,27 +372,9 @@ class ProductController extends Controller
             ]);
 
             $user = $request->user();
-            $sessionId = null;
             
-            // Get session ID for guest users - same approach as CartController
-            // Prioritize cookie over session for better persistence
-            $sessionId = null;
-            
-            if (!$user) {
-                // First, try to get from cookie (most reliable for guest persistence)
-                $sessionId = $request->cookie('cart_session_id');
-                
-                // If no cookie, try session
-                if (!$sessionId) {
-                    try {
-                        if ($request->hasSession()) {
-                            $sessionId = $request->session()->getId();
-                        }
-                    } catch (\Exception $e) {
-                        // Session not available
-                    }
-                }
-            }
+            // Get session ID using centralized SessionService
+            $sessionId = SessionService::getSessionId($request);
 
             // Find product by UUID
             $product = Product::where('uuid', $data['product_id'])->first();
@@ -475,27 +413,9 @@ class ProductController extends Controller
     {
         try {
             $user = $request->user();
-            $sessionId = null;
             
-            // Get session ID for guest users - same approach as CartController
-            // Prioritize cookie over session for better persistence
-            $sessionId = null;
-            
-            if (!$user) {
-                // First, try to get from cookie (most reliable for guest persistence)
-                $sessionId = $request->cookie('cart_session_id');
-                
-                // If no cookie, try session
-                if (!$sessionId) {
-                    try {
-                        if ($request->hasSession()) {
-                            $sessionId = $request->session()->getId();
-                        }
-                    } catch (\Exception $e) {
-                        // Session not available
-                    }
-                }
-            }
+            // Get session ID using centralized SessionService
+            $sessionId = SessionService::getSessionId($request);
 
             $query = RecentlyViewedProduct::query();
             

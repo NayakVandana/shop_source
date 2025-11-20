@@ -4,6 +4,11 @@ import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import '../css/app.css';
 import './react-refresh-runtime';
+import sessionService from './utils/sessionService';
+
+// Initialize session service on app startup
+// This syncs session_id from cookie to localStorage
+sessionService.initialize();
 
 const appName = import.meta.env.VITE_APP_NAME || 'ShopSource';
 
