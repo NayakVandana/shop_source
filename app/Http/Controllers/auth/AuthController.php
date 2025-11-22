@@ -5,6 +5,7 @@ namespace App\Http\Controllers\auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\UserToken;
+use App\Models\RecentlyViewedProduct;
 use App\Helpers\SessionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -135,6 +136,45 @@ class AuthController extends Controller
             } catch (\Exception $e) {
                 // Silently fail cart merge - don't break login
                 \Log::warning('Failed to merge cart on login: ' . $e->getMessage());
+            }
+
+            // Merge guest recently viewed products with user account after login
+            try {
+                $sessionId = SessionService::getOrCreateSessionId($request);
+
+                if ($sessionId) {
+                    // Get all guest recently viewed products for this session
+                    $guestRecentlyViewed = RecentlyViewedProduct::where('session_id', $sessionId)
+                        ->whereNull('user_id')
+                        ->get();
+
+                    if ($guestRecentlyViewed->isNotEmpty()) {
+                        foreach ($guestRecentlyViewed as $guestView) {
+                            // Check if user already has this product in their recently viewed
+                            $userView = RecentlyViewedProduct::where('user_id', $user->id)
+                                ->where('product_id', $guestView->product_id)
+                                ->first();
+
+                            if ($userView) {
+                                // User already has this product viewed - keep the most recent viewed_at
+                                if ($guestView->viewed_at > $userView->viewed_at) {
+                                    $userView->update(['viewed_at' => $guestView->viewed_at]);
+                                }
+                                // Delete the guest record
+                                $guestView->delete();
+                            } else {
+                                // User doesn't have this product - transfer guest record to user
+                                $guestView->update([
+                                    'user_id' => $user->id,
+                                    'session_id' => $sessionId,
+                                ]);
+                            }
+                        }
+                    }
+                }
+            } catch (\Exception $e) {
+                // Silently fail recently viewed merge - don't break login
+                \Log::warning('Failed to merge recently viewed products on login: ' . $e->getMessage());
             }
 
             // Placeholder: Dispatch UserLoggedin event

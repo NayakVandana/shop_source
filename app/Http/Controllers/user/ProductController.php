@@ -261,6 +261,38 @@ class ProductController extends Controller
             // or ['session_id', 'product_id'] for guest users
             $recentlyViewed = DB::transaction(function () use ($user, $sessionId, $product) {
                 if ($user) {
+                    // For authenticated users, check if there's a guest record for this product
+                    if ($sessionId) {
+                        $guestView = RecentlyViewedProduct::where('session_id', $sessionId)
+                            ->whereNull('user_id')
+                            ->where('product_id', $product->id)
+                            ->first();
+                        
+                        if ($guestView) {
+                            // Check if user already has this product viewed
+                            $userView = RecentlyViewedProduct::where('user_id', $user->id)
+                                ->where('product_id', $product->id)
+                                ->first();
+                            
+                            if ($userView) {
+                                // User already has it - keep the most recent viewed_at and delete guest record
+                                if ($guestView->viewed_at > $userView->viewed_at) {
+                                    $userView->update(['viewed_at' => $guestView->viewed_at]);
+                                }
+                                $guestView->delete();
+                                return $userView;
+                            } else {
+                                // Transfer guest record to user
+                                $guestView->update([
+                                    'user_id' => $user->id,
+                                    'session_id' => $sessionId,
+                                    'viewed_at' => now(),
+                                ]);
+                                return $guestView;
+                            }
+                        }
+                    }
+                    
                     // For authenticated users, match on user_id and product_id
                     return RecentlyViewedProduct::updateOrCreate(
                         [
@@ -268,7 +300,7 @@ class ProductController extends Controller
                             'product_id' => $product->id,
                         ],
                         [
-                            'session_id' => null,
+                            'session_id' => $sessionId,
                             'viewed_at' => now(),
                         ]
                     );

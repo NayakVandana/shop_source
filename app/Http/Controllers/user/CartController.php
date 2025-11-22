@@ -198,12 +198,41 @@ class CartController extends Controller
     }
 
     /**
-     * Get cart with items
+     * Get cart with items (only retrieve existing cart, don't create)
      */
     public function index(Request $request)
     {
         try {
-            $cart = $this->getOrCreateCart($request);
+            $user = $request->user();
+            $sessionId = SessionService::getOrCreateSessionId($request);
+            
+            $cart = null;
+            
+            if ($user) {
+                // Get cart for authenticated user (don't create if doesn't exist)
+                $cart = Cart::where('user_id', $user->id)->first();
+            } else {
+                // Get cart for guest user (don't create if doesn't exist)
+                if ($sessionId) {
+                    $cart = Cart::where('session_id', $sessionId)
+                        ->whereNull('user_id')
+                        ->first();
+                }
+            }
+            
+            // If no cart exists, return empty cart response
+            if (!$cart) {
+                $cartData = [
+                    'cart' => null,
+                    'total_items' => 0,
+                    'subtotal' => 0,
+                    'total_discount' => 0,
+                ];
+                
+                $response = $this->sendJsonResponse(true, 'Cart retrieved successfully', $cartData);
+                return SessionService::setSessionCookie($response, $sessionId);
+            }
+            
             $cartData = $this->formatCartResponse($cart);
             
             // Add session_id to response data (for mobile apps)
@@ -519,6 +548,24 @@ class CartController extends Controller
 
             $cartItem->delete();
 
+            // Check if cart is now empty, if so delete the cart
+            $cart->refresh();
+            if ($cart->items()->count() === 0) {
+                $sessionId = $cart->session_id;
+                $cart->delete();
+                
+                // Return empty cart response
+                $cartData = [
+                    'cart' => null,
+                    'total_items' => 0,
+                    'subtotal' => 0,
+                    'total_discount' => 0,
+                ];
+                
+                $response = $this->sendJsonResponse(true, 'Item removed from cart successfully. Cart is now empty.', $cartData);
+                return SessionService::setSessionCookie($response, $sessionId);
+            }
+
             $cartData = $this->formatCartResponse($cart);
 
             $response = $this->sendJsonResponse(true, 'Item removed from cart successfully', $cartData);
@@ -536,17 +583,55 @@ class CartController extends Controller
     public function clear(Request $request)
     {
         try {
-            $cart = $this->getOrCreateCart($request);
+            $user = $request->user();
+            $sessionId = SessionService::getOrCreateSessionId($request);
+            
+            $cart = null;
+            
+            if ($user) {
+                // Get cart for authenticated user (don't create if doesn't exist)
+                $cart = Cart::where('user_id', $user->id)->first();
+            } else {
+                // Get cart for guest user (don't create if doesn't exist)
+                if ($sessionId) {
+                    $cart = Cart::where('session_id', $sessionId)
+                        ->whereNull('user_id')
+                        ->first();
+                }
+            }
+            
+            // If no cart exists, return empty cart response
+            if (!$cart) {
+                $cartData = [
+                    'cart' => null,
+                    'total_items' => 0,
+                    'subtotal' => 0,
+                    'total_discount' => 0,
+                ];
+                
+                $response = $this->sendJsonResponse(true, 'Cart is already empty', $cartData);
+                return SessionService::setSessionCookie($response, $sessionId);
+            }
+            
+            // Delete all items
             $cart->items()->delete();
             
-            // Reload cart to get fresh state
-            $cart->refresh();
-            $cartData = $this->formatCartResponse($cart);
+            // Delete the cart since it's now empty
+            $sessionId = $cart->session_id;
+            $cart->delete();
+            
+            // Return empty cart response
+            $cartData = [
+                'cart' => null,
+                'total_items' => 0,
+                'subtotal' => 0,
+                'total_discount' => 0,
+            ];
 
             $response = $this->sendJsonResponse(true, 'Cart cleared successfully', $cartData);
 
             // Always set/update session cookie to maintain cart persistence
-            return SessionService::setSessionCookie($response, $cart->session_id);
+            return SessionService::setSessionCookie($response, $sessionId);
         } catch (Exception $e) {
             return $this->sendError($e);
         }
